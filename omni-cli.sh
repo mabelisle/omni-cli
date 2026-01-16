@@ -1,7 +1,5 @@
 #!/bin/bash
 
-mkdir -p /config/gemini /config/codex /config/copilot /config/npm /data
-
 launch_ai() {
     local project=$1
     local choice=$2
