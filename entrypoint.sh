@@ -1,24 +1,40 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
-mkdir -p /config/gemini /config/codex /config/copilot /config/npm /data
+# Configurable variables with defaults
+USER_NAME=${USER_NAME:-omni}
+PUID=${PUID:-1000}
+PGID=${PGID:-1000}
 
-chown -R 1001:1001 -R /data || true
-chown -R 1001:1001 -R /config || true
+# Update user UID/GID if they differ from current (to match host volume permissions)
+if [ "$(id -u "$USER_NAME")" != "$PUID" ]; then
+    usermod -o -u "$PUID" "$USER_NAME"
+fi
+if [ "$(id -g "$USER_NAME")" != "$PGID" ]; then
+    groupmod -o -g "$PGID" "$USER_NAME"
+fi
 
-# Ensure runtime dirs exist (common requirement)
-mkdir -p /var/run/sshd
+# Ensure critical directories exist and have correct ownership
+for dir in /data /config /var/run/sshd; do
+    mkdir -p "$dir"
+done
 
-# Ensure host keys exist (required for sshd to start)
-# This path is typical on Debian/Ubuntu; on Alpine it's also common.
+# Initialize SSH host keys if missing
 if [ ! -f /etc/ssh/ssh_host_rsa_key ]; then
-  ssh-keygen -A
+    echo "Generating SSH keys..."
+    ssh-keygen -A
 fi
 
-# If no command was provided, start sshd in foreground and log to stderr
+# Fix ownership of persistent volumes
+chown -R "$USER_NAME":"$USER_NAME" /data /config
+
+# Logic:
+# 1. If no arguments are provided, start SSHD (as root).
+# 2. If arguments are provided, execute them as the non-root user.
 if [ "$#" -eq 0 ]; then
-  exec /usr/sbin/sshd -D -e
+    echo "Starting SSH server..."
+    exec /usr/sbin/sshd -D -e
+else
+    # executing command as user
+    exec runuser -u "$USER_NAME" -- "$@"
 fi
-
-# Otherwise run whatever command was provided (docker run ... <cmd>)
-exec "$@"

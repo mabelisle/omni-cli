@@ -1,55 +1,82 @@
-FROM node:latest
+# syntax=docker/dockerfile:1
+# ^ Enable BuildKit features
 
-# Install system dependencies
+# ---- Base Stage ----
+FROM node:25-slim AS base
+LABEL maintainer="mabelisle <mabelisle@gmail.com>" \
+      org.opencontainers.image.title="Omni-CLI" \
+      org.opencontainers.image.description="Multi AI CLI interface environment" \
+      org.opencontainers.image.source="https://github.com/mabelisle/omni-cli" \
+      org.opencontainers.image.vendor="Smartypants LLC"
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    NODE_ENV=production
+
+# Install runtime dependencies
+# tini: Proper init process for handling signals and zombie processes
+# openssh-server: Required for remote access feature
+# nano, git, curl: Standard CLI tools for user convenience
 RUN apt-get update && \
-  DEBIAN_FRONTEND=noninteractive apt-get -y dist-upgrade && \
-  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    apt-get install -y --no-install-recommends \
+    tini \
     openssh-server \
     bash \
-    nano && \
-  apt autoremove -y
+    nano \
+    git \
+    curl \
+    procps && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-# Default SSH user + password (override at runtime)
-ENV USER_NAME=omni \
-    USER_PASS=changeme
+# ---- Build Stage ----
+FROM base AS builder
+# Install globally. We do this in a separate stage to potentially 
+# keep the final layer clean, though strictly for globals it's less critical.
+# It helps if we needed build tools (python/make) that we don't want in final.
+RUN npm install -g \
+    npm@latest \
+    @google/gemini-cli \
+    @google/gemini-cli-core \
+    @openai/codex \
+    @github/copilot && \
+    npm cache clean --force
 
-# Create the user with a home directory and default shell, then set the password
-RUN useradd -m -s /bin/bash $USER_NAME && \
-    echo "$USER_NAME:$USER_PASS" | chpasswd
+# ---- Final Stage ----
+FROM base AS final
 
-# Persistent locations used by tools
-ENV CONFIG_DIR=/config \
-  DATA_DIR=/data \
-  NPM_CONFIG_CACHE=/config/npm
+# Create non-root user
+ARG USER_NAME=omni
+ARG USER_PASS=changeme
+ENV USER_NAME=${USER_NAME}
+# UID/GID can be overridden at runtime via entrypoint if needed, 
+# but we set a default here.
+RUN useradd -m -s /bin/bash ${USER_NAME} && \
+    echo "${USER_NAME}:${USER_PASS}" | chpasswd
 
-# Link "dotfile" config paths to /config
-# Note: /config will be mounted as a volume at runtime; ensure subfolders exist via entrypoint if needed
-RUN mkdir -p /config /data && \
-  ln -sf /config/gemini  /home/$USER_NAME/.gemini  && \
-  ln -sf /config/codex   /home/$USER_NAME/.codex   && \
-  ln -sf /config/copilot /home/$USER_NAME/.copilot && \
-  ln -sf /config/npm     /home/$USER_NAME/.npm
+# Copy installed node modules and binaries from builder
+COPY --from=builder /usr/local/lib/node_modules /usr/local/lib/node_modules
+COPY --from=builder /usr/local/bin /usr/local/bin
 
-RUN chown $USER_NAME:$USER_NAME -R /config
+# Setup persistent directories and symlinks
+# We create them here to ensure they exist, but ownership is fixed in entrypoint
+RUN mkdir -p /config/gemini /config/codex /config/copilot /config/npm /data && \
+    ln -sf /config/gemini  /home/${USER_NAME}/.gemini  && \
+    ln -sf /config/codex   /home/${USER_NAME}/.codex   && \
+    ln -sf /config/copilot /home/${USER_NAME}/.copilot && \
+    ln -sf /config/npm     /home/${USER_NAME}/.npm && \
+    echo 'alias ll="ls -alF"' >> /etc/bash.bashrc
 
-# Upgrade npm and install AI CLIs globally
-RUN npm install -g npm@latest && \
-  npm install -g @google/gemini-cli @google/gemini-cli-core @openai/codex @github/copilot && \
-  (npm cache verify || true)
-
-# Add the alias "ll" to the system-wide bashrc file.
-RUN echo 'alias ll="ls -alF"' >> /etc/bash.bashrc
-
-# Optional project menu
+# Copy scripts
 COPY omni-cli.sh /usr/local/bin/omni-cli
-RUN chmod +x /usr/local/bin/omni-cli && \
-  echo '/usr/local/bin/omni-cli' >> /home/$USER_NAME/.profile
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/omni-cli /usr/local/bin/entrypoint.sh && \
+    echo '/usr/local/bin/omni-cli' >> /home/${USER_NAME}/.profile
 
-WORKDIR /data
+# Expose SSH port
+EXPOSE 22
 
+# Volumes for persistence
 VOLUME ["/data", "/config"]
 
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
-
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+# Set Tini as init process
+ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/entrypoint.sh"]
