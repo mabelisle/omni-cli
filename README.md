@@ -1,3 +1,4 @@
+```
   ## Omni-cli
   omni-cli:
    build: ./build/omni-cli
@@ -9,3 +10,4 @@
      - omni-cli_data:/data
      - omni-cli_config:/config
    restart: unless-stopped
+```
