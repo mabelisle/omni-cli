@@ -4,7 +4,7 @@
 ![Node.js](https://img.shields.io/badge/Node.js-25--slim-green?logo=node.js)
 ![Status](https://img.shields.io/badge/Status-Active-success)
 
-**Omni-CLI** is a Dockerized SSH environment that gives you instant access to preinstalled AI CLIs. Connect once and use **Gemini**, **Codex**, **Copilot**, and **Claude** without installing anything on your laptop. Your tools and configs live in a single remote workspace, so you do not need to log in on every device.
+**Omni-CLI** is a Dockerized SSH environment that gives you instant access to preinstalled AI CLIs. Connect once and use **Gemini**, **Codex**, **Copilot**, **Claude**, and **Aider** without installing anything on your laptop. Your tools and configs live in a single remote workspace, so you do not need to log in on every device.
 
 Use it as a personal AI terminal you can reach from anywhere via SSH, with everything ready to run.
 
@@ -13,7 +13,7 @@ Use it as a personal AI terminal you can reach from anywhere via SSH, with every
 ## 🚀 Features
 
 *   **🔑 SSH-First Workflow:** Connect remotely and launch AI CLIs immediately.
-*   **🤖 Preinstalled Agents:** Gemini, Codex, Copilot, and Claude are ready out of the box.
+*   **🤖 Preinstalled Agents:** Gemini, Codex, Copilot, Claude, and Aider are ready out of the box.
 *   **💾 Persistent Workspace:** Projects and auth/config live in Docker volumes, not on each device.
 *   **🧭 Unified Menu:** The `omni-cli` dashboard lists projects and launches tools.
 *   **🔒 Isolated Runtime:** Everything runs in Docker, keeping your host clean.
@@ -126,7 +126,7 @@ The `entrypoint.sh` script is the brain of the container initialization:
 When you log in, `omni-cli.sh` is sourced. It provides an ASCII-art menu to:
 *   List available projects in `/data`.
 *   Create/Delete projects.
-*   Launch context-aware AI sessions within those projects (Gemini, Codex, Copilot, Claude).
+*   Launch context-aware AI sessions within those projects (Gemini, Codex, Copilot, Claude, Aider).
 
 ---
 

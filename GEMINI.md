@@ -1,7 +1,7 @@
 # Omni-CLI Context
 
 ## Project Overview
-**Omni-CLI** is a Dockerized, neural interface environment designed to unify access to various AI CLI tools (Gemini, Codex, Copilot). It provides a secure, sandboxed workspace that can be accessed via SSH or direct Docker attachment. The project is built on top of a lightweight Node.js image and includes custom shell scripts for project management and tool invocation.
+**Omni-CLI** is a Dockerized, neural interface environment designed to unify access to various AI CLI tools (Gemini, Codex, Copilot, Aider). It provides a secure, sandboxed workspace that can be accessed via SSH or direct Docker attachment. The project is built on top of a lightweight Node.js image and includes custom shell scripts for project management and tool invocation.
 
 ## Architecture & Core Components
 
