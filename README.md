@@ -130,6 +130,20 @@ When you log in, `omni-cli.sh` is sourced. It provides an ASCII-art menu to:
 
 ---
 
+## 💡 Usage & Authentication
+
+**Important:** Omni-CLI provides the *environment* and *tools*, but **you must provide the access**.
+
+Each AI CLI (**Gemini**, **Codex**, **Copilot**, **Claude**, **Aider**) is pre-installed software that requires its own authentication. When you launch a tool for the first time, you will typically be prompted to login or provide an API key.
+
+### Pro Tip: The "Free Tier" Rotation 🔄
+There are plenty of ways to get free AI access using these tools! Since you have all of them at your fingertips:
+1.  Start with your preferred agent.
+2.  If you hit a rate limit or a free tier cap, simply **switch to the next one** in the menu.
+3.  Cycle through **Gemini**, **Codex**, **Copilot**, **Claude**, and **Aider** to maximize your productivity without needing a paid subscription for every single service.
+
+---
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
