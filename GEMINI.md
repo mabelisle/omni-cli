@@ -70,7 +70,7 @@ docker run -d \
 
 This project stands on the shoulders of giants. A huge thank you to the teams behind these amazing tools:
 
-*   **Gemini:** [google/gemini-cli](https://github.com/google/gemini-cli)
+*   **Gemini:** [google-gemini/gemini-cli](https://github.com/google-gemini/gemini-cli)
 *   **Codex:** [openai/codex](https://github.com/openai/codex)
 *   **Copilot:** [github/copilot-cli](https://github.com/github/copilot-cli)
 *   **Claude:** [anthropics/claude-code](https://github.com/anthropics/claude-code)
