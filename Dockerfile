@@ -24,6 +24,7 @@ RUN apt-get update && \
     nano \
     git \
     curl \
+    ca-certificates \
     procps && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
@@ -49,8 +50,9 @@ ARG USER_NAME=omni
 ARG USER_PASS=changeme
 ENV USER_NAME=${USER_NAME}
 # UID/GID can be overridden at runtime via entrypoint if needed, 
-# but we set a default here.
-RUN useradd -m -s /bin/bash ${USER_NAME} && \
+# but we set a default here. We remove the 'node' user first to free up UID 1000.
+RUN userdel -r node && \
+    useradd -m -s /bin/bash ${USER_NAME} && \
     echo "${USER_NAME}:${USER_PASS}" | chpasswd
 
 # Copy installed node modules and binaries from builder
