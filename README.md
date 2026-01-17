@@ -10,6 +10,13 @@ Use it as a personal AI terminal you can reach from anywhere via SSH, with every
 
 ---
 
+## 📸 Screenshots
+
+![Omni-CLI overview](images/Multi-CLI.png)
+![Omni-CLI menu](images/Omni-CLI-menu.png)
+
+---
+
 ## 🚀 Features
 
 *   **🔑 SSH-First Workflow:** Connect remotely and launch AI CLIs immediately.
