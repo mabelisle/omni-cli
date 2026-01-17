@@ -19,6 +19,14 @@ for dir in /data /config /var/run/sshd; do
     mkdir -p "$dir"
 done
 
+# Ensure config subdirectories exist (in case volume mount is empty)
+for subdir in gemini codex copilot claude npm .aider; do
+    if [ ! -d "/config/$subdir" ]; then
+        echo "Creating missing config directory: /config/$subdir"
+        mkdir -p "/config/$subdir"
+    fi
+done
+
 # Initialize SSH host keys if missing
 if [ ! -f /etc/ssh/ssh_host_rsa_key ]; then
     echo "Generating SSH keys..."

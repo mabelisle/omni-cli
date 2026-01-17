@@ -1,27 +1,23 @@
-# Omni-CLI: Your AI-Powered Terminal Companion
+# Omni-CLI: SSH Into Ready-to-Use AI CLIs
 
 ![Docker](https://img.shields.io/badge/Docker-Enabled-blue?logo=docker)
 ![Node.js](https://img.shields.io/badge/Node.js-25--slim-green?logo=node.js)
 ![Status](https://img.shields.io/badge/Status-Active-success)
 
-**Omni-CLI** is a robust, Dockerized environment designed to bridge the gap between your terminal and powerful AI agents. It provides a secure, portable, and pre-configured workspace for interacting with **Google Gemini**, **OpenAI Codex**, and **GitHub Copilot** directly from the command line.
+**Omni-CLI** is a Dockerized SSH environment that gives you instant access to preinstalled AI CLIs. Connect once and use **Gemini**, **Codex**, **Copilot**, and **Claude** without installing anything on your laptop. Your tools and configs live in a single remote workspace, so you do not need to log in on every device.
 
-Whether you are scaffolding a new project, debugging complex code, or exploring AI capabilities, Omni-CLI offers a unified neural interface to manage it all.
+Use it as a personal AI terminal you can reach from anywhere via SSH, with everything ready to run.
 
 ---
 
 ## 🚀 Features
 
-*   **🔮 Unified Neural Interface:** A central, menu-driven dashboard (`omni-cli`) to manage workspaces and launch specific AI tools.
-*   **🤖 Multi-Agent Support:** Pre-installed and configured CLI tools for:
-    *   **Gemini:** Google's multimodal AI.
-    *   **Codex:** OpenAI's code generation model.
-    *   **Copilot:** GitHub's AI pair programmer.
-*   **🔒 Sandboxed Environment:** Runs entirely within Docker, keeping your host system clean and dependencies isolated.
-*   **💾 Persistent Workspaces:** Projects and configurations are saved to Docker volumes, ensuring your data survives container restarts.
-*   **🔑 Secure Access:** Connect via a standalone SSH server or direct Docker attachment.
-*   **👤 Smart User Mapping:** Automatically maps internal container permissions (PUID/PGID) to your host user, preventing file ownership headaches.
-*   **⚡ Lightweight Core:** Built on top of the bleeding-edge `node:25-slim` image for maximum efficiency and minimal footprint.
+*   **🔑 SSH-First Workflow:** Connect remotely and launch AI CLIs immediately.
+*   **🤖 Preinstalled Agents:** Gemini, Codex, Copilot, and Claude are ready out of the box.
+*   **💾 Persistent Workspace:** Projects and auth/config live in Docker volumes, not on each device.
+*   **🧭 Unified Menu:** The `omni-cli` dashboard lists projects and launches tools.
+*   **🔒 Isolated Runtime:** Everything runs in Docker, keeping your host clean.
+*   **👤 Smart UID/GID Mapping:** Avoids permission issues on mounted volumes.
 
 ---
 
@@ -51,7 +47,7 @@ Access the environment via SSH (Password: `changeme`):
 ssh omni@localhost -p 2222
 ```
 
-*🎉 You are now inside the Omni-CLI. The neural interface menu will launch automatically.*
+*🎉 You are now inside Omni-CLI. The AI menu launches automatically and tools are ready to use.*
 
 ---
 
@@ -130,7 +126,7 @@ The `entrypoint.sh` script is the brain of the container initialization:
 When you log in, `omni-cli.sh` is sourced. It provides an ASCII-art menu to:
 *   List available projects in `/data`.
 *   Create/Delete projects.
-*   Launch context-aware AI sessions within those projects.
+*   Launch context-aware AI sessions within those projects (Gemini, Codex, Copilot, Claude).
 
 ---
 

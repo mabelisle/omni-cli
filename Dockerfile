@@ -25,7 +25,9 @@ RUN apt-get update && \
     git \
     curl \
     ca-certificates \
-    procps && \
+    procps \
+    python3 \
+    pipx && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -39,7 +41,8 @@ RUN npm install -g \
     @google/gemini-cli \
     @google/gemini-cli-core \
     @openai/codex \
-    @github/copilot && \
+    @github/copilot \
+    @anthropic-ai/claude-code && \
     npm cache clean --force
 
 # ---- Final Stage ----
@@ -61,11 +64,16 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Setup persistent directories and symlinks
 # We create them here to ensure they exist, but ownership is fixed in entrypoint
-RUN mkdir -p /config/gemini /config/codex /config/copilot /config/npm /data && \
+RUN PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin pipx install aider-chat && \
+    pipx ensurepath
+
+RUN mkdir -p /config/gemini /config/codex /config/copilot /config/claude /config/npm /config/.aider /data && \
     ln -sf /config/gemini  /home/${USER_NAME}/.gemini  && \
     ln -sf /config/codex   /home/${USER_NAME}/.codex   && \
     ln -sf /config/copilot /home/${USER_NAME}/.copilot && \
+    ln -sf /config/claude /home/${USER_NAME}/.claude && \
     ln -sf /config/npm     /home/${USER_NAME}/.npm && \
+    ln -sf /config/aider  /home/${USER_NAME}/.aider && \
     echo 'alias ll="ls -alF"' >> /etc/bash.bashrc
 
 # Copy scripts

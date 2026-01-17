@@ -10,6 +10,8 @@ launch_ai() {
         1) echo " Tool: Gemini CLI"; gemini ;;
         2) echo " Tool: OpenAI Codex"; codex ;;
         3) echo " Tool: GitHub Copilot"; copilot ;;
+        4) echo " Tool: Anthropic Claude Code"; claude ;;
+        5) echo " Tool: Aider Chat"; aider ;;
     esac
     echo "-----------------------------------"
     echo "AI Session closed. Entering shell..."
@@ -61,9 +63,9 @@ EOF
             if [ $idx -ge 0 ] && [ $idx -lt ${#projects[@]} ]; then
                 project="${projects[$idx]}"
                 cd "/data/$project"
-                echo -e "\nSelect AI Agent:\n1) Gemini  2) Codex  3) Copilot  b) Back"
+                echo -e "\nSelect AI Agent:\n1) Gemini  2) Codex  3) Copilot  4) Claude  5) Aider  b) Back"
                 read -p "> " ai_idx
-                [[ "$ai_idx" =~ ^[1-3]$ ]] && launch_ai "$project" "$ai_idx"
+                [[ "$ai_idx" =~ ^[1-5]$ ]] && launch_ai "$project" "$ai_idx"
             fi
             ;;
     esac
