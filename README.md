@@ -1,12 +1,12 @@
-# Omni-CLI: SSH Into Ready-to-Use AI CLIs
+# Omni-CLI: All-in-One AI CLI Hub over SSH
 
 ![Docker](https://img.shields.io/badge/Docker-Enabled-blue?logo=docker)
 ![Node.js](https://img.shields.io/badge/Node.js-25--slim-green?logo=node.js)
 ![Status](https://img.shields.io/badge/Status-Active-success)
 
-**Omni-CLI** is a Dockerized SSH environment that gives you instant access to preinstalled AI CLIs. Connect once and use **Gemini**, **Codex**, **Copilot**, **Claude**, and **Aider** without installing anything on your laptop. Your tools and configs live in a single remote workspace, so you do not need to log in on every device.
+**Omni-CLI** is a Dockerized SSH workspace that bundles multiple AI CLIs in one place. Connect once and use **Gemini**, **Codex**, **Copilot**, **Claude**, and **Aider** without installing anything on your laptop. Your tools and configs live in a single remote workspace, so you do not need to log in on every device.
 
-Use it as a personal AI terminal you can reach from anywhere via SSH, with everything ready to run.
+Think of it as an all-in-one AI CLI cockpit you can reach from anywhere over SSH.
 
 ---
 
@@ -22,9 +22,11 @@ Use it as a personal AI terminal you can reach from anywhere via SSH, with every
 *   **🔑 SSH-First Workflow:** Connect remotely and launch AI CLIs immediately.
 *   **🤖 Preinstalled Agents:** **Gemini**, **Codex**, **Copilot**, **Claude**, and **Aider** are ready out of the box.
 *   **💾 Persistent Workspace:** Projects and auth/config live in Docker volumes, not on each device.
-*   **🧭 Unified Menu:** The `omni-cli` dashboard lists projects and launches tools.
+*   **🧭 Unified Menu:** The `omni-cli` dashboard navigates nested folders, shows breadcrumbs, and launches tools.
 *   **🔒 Isolated Runtime:** Everything runs in Docker, keeping your host clean.
 *   **👤 Smart UID/GID Mapping:** Avoids permission issues on mounted volumes.
+*   **🧪 Aider Power-User Flow:** Provider selection (DeepSeek/OpenRouter/Ollama), recent models, and OpenRouter category pricing.
+*   **🗝️ API Key Status:** Quick status panel for configured API keys.
 
 ---
 
@@ -70,6 +72,14 @@ You can customize the environment by setting environment variables in your `dock
 | `PGID` | `1000` | **Group ID**. Set this to your host user's GID (run `id -g`). |
 | `USER_PASS`| `changeme`| **SSH Password**. The password for the `omni` user (only effective if set during build via `--build-arg`). |
 | `TZ` | `UTC` | **Timezone**. Set container timezone (e.g., `America/New_York`). |
+
+### Aider Provider Variables
+
+| Variable | Description |
+| :--- | :--- |
+| `DEEPSEEK_API_KEY` | Enables Aider + DeepSeek. |
+| `OPENROUTER_API_KEY` / `OR_API_KEY` | Enables Aider + OpenRouter. |
+| `OLLAMA_API_BASE` | Enables Aider + Ollama (e.g., `http://127.0.0.1:11434`). |
 
 ### Volumes
 
@@ -129,11 +139,12 @@ The `entrypoint.sh` script is the brain of the container initialization:
 2.  **Key Gen:** Generates SSH host keys if they are missing.
 3.  **Privilege Drop:** While it runs as `root` to perform setup, it executes the final command (or starts the SSH daemon) as the unprivileged `omni` user (or drops privileges appropriately) to ensure security.
 
-### The Neural Interface (`omni-cli.sh`)
+### The Menu Interface (`omni-cli.sh`)
 When you log in, `omni-cli.sh` is sourced. It provides an ASCII-art menu to:
-*   List available projects in `/data`.
-*   Create/Delete projects.
-*   Launch context-aware AI sessions within those projects (**Gemini**, **Codex**, **Copilot**, **Claude**, **Aider**).
+*   Navigate folders and subfolders in `/data` with breadcrumb paths.
+*   Create/Delete folders.
+*   Launch context-aware AI sessions within those folders (**Gemini**, **Codex**, **Copilot**, **Claude**, **Aider**).
+*   View API key status and recent Aider models.
 
 ---
 
@@ -142,6 +153,8 @@ When you log in, `omni-cli.sh` is sourced. It provides an ASCII-art menu to:
 **Important:** Omni-CLI provides the *environment* and *tools*, but **you must provide the access**.
 
 Each AI CLI (**Gemini**, **Codex**, **Copilot**, **Claude**, **Aider**) is pre-installed software that requires its own authentication. When you launch a tool for the first time, you will typically be prompted to login or provide an API key.
+
+Aider uses environment variables for providers like OpenRouter, DeepSeek, and Ollama. Set those variables in your container environment and confirm them from the **API keys status** menu.
 
 ### Pro Tip: The "Free Tier" Rotation 🔄
 There are plenty of ways to get free AI access using these tools! Since you have all of them at your fingertips:

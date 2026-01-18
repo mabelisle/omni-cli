@@ -1,11 +1,16 @@
 #!/bin/bash
 
+# Load persisted environment variables created by the entrypoint.
 if [ -f /etc/profile.d/omni-cli-env.sh ]; then
     . /etc/profile.d/omni-cli-env.sh
 fi
 
+# Core paths.
 ROOT_DIR="/data"
+OMNI_CLI_REPO="/data/omni-cli"
 RECENT_MODELS_FILE="/config/.aider/omni-cli-recent-models"
+
+# Color palette (TTY-only).
 USE_COLOR=0
 if [ -t 1 ] && command -v tput >/dev/null 2>&1; then
     USE_COLOR=1
@@ -31,14 +36,15 @@ if [ "$USE_COLOR" -eq 1 ]; then
     COLOR_CYAN=$(tput setaf 6)
 fi
 
+# Version is sourced from env or git.
 get_version() {
     if [ -n "${OMNI_CLI_VERSION:-}" ]; then
         echo "$OMNI_CLI_VERSION"
         return
     fi
-    if command -v git >/dev/null 2>&1 && [ -d /data/omni-cli/.git ]; then
+    if command -v git >/dev/null 2>&1 && [ -d "$OMNI_CLI_REPO/.git" ]; then
         local rev
-        rev=$(git -C /data/omni-cli rev-parse --short HEAD 2>/dev/null)
+        rev=$(git -C "$OMNI_CLI_REPO" rev-parse --short HEAD 2>/dev/null)
         if [ -n "$rev" ]; then
             echo "git-$rev"
             return
@@ -48,6 +54,8 @@ get_version() {
 }
 
 OMNI_CLI_VERSION="$(get_version)"
+
+# API keys shown in the status menu.
 all_env_vars=(
     OPENROUTER_API_KEY
     OR_API_KEY
@@ -116,6 +124,7 @@ all_env_vars=(
     XINFERENCE_API_KEY
 )
 
+# Basic helpers.
 env_status() {
     local name=$1
     if [ -n "${!name:-}" ]; then
@@ -126,15 +135,22 @@ env_status() {
 }
 
 openrouter_api_key() {
-    if [ -n "${OPENROUTER_API_KEY:-}" ]; then
-        echo "$OPENROUTER_API_KEY"
-        return
-    fi
-    if [ -n "${OR_API_KEY:-}" ]; then
-        echo "$OR_API_KEY"
+    echo "${OPENROUTER_API_KEY:-${OR_API_KEY:-}}"
+}
+
+mask_api_key() {
+    local value=$1
+    local length=${#value}
+    if [ $length -le 4 ]; then
+        echo "****"
+    elif [ $length -le 8 ]; then
+        echo "${value:0:2}..."
+    else
+        echo "${value:0:4}...${value: -4}"
     fi
 }
 
+# Quick PATH check for installed CLIs.
 cli_status() {
     local missing=()
     local tools=(gemini codex copilot claude aider)
@@ -183,17 +199,7 @@ show_env_summary() {
     echo "${COLOR_BOLD}API keys status (enabled):${COLOR_RESET}"
     for var in "${enabled[@]}"; do
         if [[ "$var" == *_API_KEY ]]; then
-            local value="${!var}"
-            local masked
-            local length=${#value}
-            if [ $length -le 4 ]; then
-                masked="****"
-            elif [ $length -le 8 ]; then
-                masked="${value:0:2}..."
-            else
-                masked="${value:0:4}...${value: -4}"
-            fi
-            echo "  ${COLOR_GREEN}$var${COLOR_RESET}: $masked"
+            echo "  ${COLOR_GREEN}$var${COLOR_RESET}: $(mask_api_key "${!var}")"
         else
             echo "  ${COLOR_GREEN}$var${COLOR_RESET}"
         fi
@@ -210,6 +216,7 @@ show_env_menu() {
     read -p "Press Enter to go back: " _
 }
 
+# Aider helpers.
 model_is_available() {
     local model=$1
     case $model in
@@ -220,37 +227,38 @@ model_is_available() {
     esac
 }
 
+run_aider_model() {
+    local model=$1
+    aider --model "$model"
+    record_recent_model "$model"
+}
+
 record_recent_model() {
     local model=$1
     [ -z "$model" ] && return
     mkdir -p "$(dirname "$RECENT_MODELS_FILE")"
-    local tmp
-    tmp=$(mktemp)
-    if [ -f "$RECENT_MODELS_FILE" ]; then
-        awk -v model="$model" '$0 != model' "$RECENT_MODELS_FILE" > "$tmp"
-    else
-        : > "$tmp"
-    fi
-    { echo "$model"; head -n 4 "$tmp"; } > "${tmp}.new"
-    mv "${tmp}.new" "$RECENT_MODELS_FILE"
-    rm -f "$tmp"
+    {
+        echo "$model"
+        grep -vxF "$model" "$RECENT_MODELS_FILE" 2>/dev/null
+    } | head -n 5 > "${RECENT_MODELS_FILE}.tmp"
+    mv "${RECENT_MODELS_FILE}.tmp" "$RECENT_MODELS_FILE"
 }
 
 load_recent_models() {
     recent_models=()
-    if [ -f "$RECENT_MODELS_FILE" ]; then
-        while IFS= read -r line; do
-            [ -z "$line" ] && continue
-            if model_is_available "$line"; then
-                recent_models+=("$line")
-            fi
-            if [ ${#recent_models[@]} -ge 5 ]; then
-                break
-            fi
-        done < "$RECENT_MODELS_FILE"
-    fi
+    [ -f "$RECENT_MODELS_FILE" ] || return
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        if model_is_available "$line"; then
+            recent_models+=("$line")
+        fi
+        if [ ${#recent_models[@]} -ge 5 ]; then
+            break
+        fi
+    done < "$RECENT_MODELS_FILE"
 }
 
+# OpenRouter listing helpers.
 openrouter_categories=(
     "Programming"
     "Roleplay"
@@ -322,28 +330,19 @@ fetch_openrouter_models() {
 
 list_openrouter_models() {
     local category=$1
-    local filter=$2
     local cache
     cache=$(fetch_openrouter_models "$category") || return 1
 
-    python3 - "$cache" "$filter" <<'PY'
+    python3 - "$cache" <<'PY'
 import json
 import sys
 
 cache = sys.argv[1]
-term = sys.argv[2].lower()
 
 with open(cache, "r", encoding="utf-8") as handle:
     data = json.load(handle)
 
-models = data.get("data", [])
-matches = []
-for model in models:
-    model_id = model.get("id", "")
-    model_name = model.get("name", model_id)
-    if term and term not in model_id.lower() and term not in model_name.lower():
-        continue
-    matches.append(model)
+matches = data.get("data", [])
 
 for idx, model in enumerate(matches, start=1):
     pricing = model.get("pricing", {})
@@ -380,35 +379,29 @@ prompt_openrouter_model() {
             return 1
         fi
         if [[ "$list_choice" =~ ^[Yy]$ ]]; then
-            while true; do
-                if ! select_openrouter_category; then
-                    break
-                fi
-                if ! list_openrouter_models "$openrouter_category" ""; then
-                    echo "OpenRouter list unavailable."
-                    continue
-                fi
+            if ! select_openrouter_category; then
+                continue
+            fi
+            if ! list_openrouter_models "$openrouter_category"; then
+                echo "OpenRouter list unavailable."
+            fi
+        fi
+        while true; do
+            read -p "OpenRouter model id (e.g. anthropic/claude-3.5-sonnet, ${COLOR_YELLOW}b${COLOR_RESET} to back): " openrouter_model_id
+            if [[ "$openrouter_model_id" =~ ^[Bb]$ ]]; then
+                openrouter_model_id=""
                 break
-            done
-        fi
-        break
-    done
-
-    while true; do
-        read -p "OpenRouter model id (e.g. anthropic/claude-3.5-sonnet, ${COLOR_YELLOW}b${COLOR_RESET} to back): " openrouter_model_id
-        if [[ "$openrouter_model_id" =~ ^[Bb]$ ]]; then
-            openrouter_model_id=""
-            return 1
-        fi
-        if [ -n "$openrouter_model_id" ]; then
-            openrouter_model_id="${openrouter_model_id#openrouter/}"
-            return 0
-        fi
+            fi
+            if [ -n "$openrouter_model_id" ]; then
+                openrouter_model_id="${openrouter_model_id#openrouter/}"
+                return 0
+            fi
+        done
     done
 }
 
+# Aider menu with provider selection and recent models.
 launch_aider() {
-    local target_dir=$1
     local aider_choice
 
     while true; do
@@ -452,9 +445,7 @@ launch_aider() {
             local r_idx=${aider_choice:1}
             r_idx=$((r_idx-1))
             if [ $r_idx -ge 0 ] && [ $r_idx -lt ${#recent_models[@]} ]; then
-                local recent_model=${recent_models[$r_idx]}
-                aider --model "$recent_model"
-                record_recent_model "$recent_model"
+                run_aider_model "${recent_models[$r_idx]}"
                 return 0
             fi
             continue
@@ -474,8 +465,7 @@ launch_aider() {
 
         case "${provider_keys[$idx]}" in
             deepseek)
-                aider --model deepseek
-                record_recent_model "deepseek"
+                run_aider_model "deepseek"
                 return 0
                 ;;
             openrouter)
@@ -483,9 +473,7 @@ launch_aider() {
                     continue
                 fi
                 if [ -n "$openrouter_model_id" ]; then
-                    local model="openrouter/$openrouter_model_id"
-                    aider --model "$model"
-                    record_recent_model "$model"
+                    run_aider_model "openrouter/$openrouter_model_id"
                     return 0
                 fi
                 continue
@@ -496,19 +484,17 @@ launch_aider() {
                     continue
                 fi
                 if [ -n "$ollama_model_id" ]; then
-                    local model="ollama/$ollama_model_id"
-                    aider --model "$model"
-                    record_recent_model "$model"
+                    run_aider_model "ollama/$ollama_model_id"
                     return 0
-                else
-                    echo "Ollama model id required."
-                    continue
                 fi
+                echo "Ollama model id required."
+                continue
                 ;;
         esac
     done
 }
 
+# AI agent selection menu.
 ai_menu() {
     local target_dir=$1
     local ai_idx
@@ -528,6 +514,7 @@ ai_menu() {
     done
 }
 
+# Tool launcher for the selected project directory.
 launch_ai() {
     local target_dir=$1
     local choice=$2
@@ -541,7 +528,7 @@ launch_ai() {
         2) echo " Tool: OpenAI Codex"; codex; launched=0 ;;
         3) echo " Tool: GitHub Copilot"; copilot; launched=0 ;;
         4) echo " Tool: Anthropic Claude Code"; claude; launched=0 ;;
-        5) echo " Tool: Aider Chat"; launch_aider "$target_dir"; launched=$? ;;
+        5) echo " Tool: Aider Chat"; launch_aider; launched=$? ;;
     esac
     if [ $launched -eq 0 ]; then
         echo "-----------------------------------"
@@ -555,6 +542,7 @@ launch_ai() {
     return 1
 }
 
+# Main menu loop.
 current_dir="$ROOT_DIR"
 while true; do
     clear
@@ -588,7 +576,7 @@ EOF
     fi
 
     echo ""
-    echo "${COLOR_BOLD}Folders:${COLOR_RESET} ${COLOR_YELLOW}n)${COLOR_RESET} New  ${COLOR_YELLOW}d)${COLOR_RESET} Delete  ${COLOR_YELLOW}u)${COLOR_RESET} Up  ${COLOR_YELLOW}b)${COLOR_RESET} Back  ${COLOR_YELLOW}r)${COLOR_RESET} Root"
+    echo "${COLOR_BOLD}Folders:${COLOR_RESET} ${COLOR_YELLOW}n)${COLOR_RESET} New  ${COLOR_YELLOW}d)${COLOR_RESET} Delete  ${COLOR_YELLOW}u)${COLOR_RESET} Up  ${COLOR_YELLOW}r)${COLOR_RESET} Root"
     echo "${COLOR_BOLD}Other:${COLOR_RESET}   ${COLOR_YELLOW}l)${COLOR_RESET} Launch AI  ${COLOR_YELLOW}k)${COLOR_RESET} API keys status  ${COLOR_YELLOW}q)${COLOR_RESET} Exit"
     echo "-----------------------------------"
     read -p "Select project or action: " choice
@@ -623,11 +611,6 @@ EOF
             show_env_menu
             ;;
         u|U)
-            if [ "$current_dir" != "$ROOT_DIR" ]; then
-                current_dir=$(dirname "$current_dir")
-            fi
-            ;;
-        b|B)
             if [ "$current_dir" != "$ROOT_DIR" ]; then
                 current_dir=$(dirname "$current_dir")
             fi
