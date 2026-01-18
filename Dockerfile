@@ -73,7 +73,7 @@ RUN mkdir -p /config/gemini /config/codex /config/copilot /config/claude /config
     ln -sf /config/copilot /home/${USER_NAME}/.copilot && \
     ln -sf /config/claude /home/${USER_NAME}/.claude && \
     ln -sf /config/npm     /home/${USER_NAME}/.npm && \
-    ln -sf /config/aider  /home/${USER_NAME}/.aider && \
+    ln -sf /config/.aider /home/${USER_NAME}/.aider && \
     echo 'alias ll="ls -alF"' >> /etc/bash.bashrc
 
 # Copy scripts
