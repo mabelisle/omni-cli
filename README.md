@@ -41,12 +41,27 @@ Think of it as an all-in-one AI CLI cockpit you can reach from anywhere over SSH
 
 Get up and running in seconds.
 
-### 1. Clone & Start
+### 1. Start
 Create a `docker-compose.yml` file (or clone the repo) and start the service:
 
 ```bash
 # Start the container in the background
 docker-compose up -d
+```
+
+Or pull the prebuilt image and run it directly:
+
+```bash
+docker pull ghcr.io/mabelisle/omni-cli:main
+
+docker run -d \
+  --name omni-cli \
+  -p 2222:22 \
+  -v $(pwd)/omni-data:/data \
+  -v $(pwd)/omni-config:/config \
+  -e PUID=$(id -u) \
+  -e PGID=$(id -g) \
+  ghcr.io/mabelisle/omni-cli:main
 ```
 
 ### 2. Connect
@@ -114,7 +129,20 @@ services:
     restart: unless-stopped
 ```
 
-### Option B: Docker CLI
+### Option B: Docker CLI (Pull Image)
+
+```bash
+docker run -d \
+  --name omni-cli \
+  -p 2222:22 \
+  -v $(pwd)/omni-data:/data \
+  -v $(pwd)/omni-config:/config \
+  -e PUID=$(id -u) \
+  -e PGID=$(id -g) \
+  ghcr.io/mabelisle/omni-cli:main
+```
+
+### Option C: Docker CLI (Build Locally)
 
 ```bash
 docker build -t omni-cli .

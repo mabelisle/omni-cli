@@ -155,10 +155,25 @@ ensure_symlink /config/.aider "/home/${USER_NAME}/.aider"
 
 persist_env_vars
 
+start_codex_node_server() {
+    local server_path="/data/omni-cli/api.js"
+    if [ ! -f "$server_path" ]; then
+        return
+    fi
+    if ! command -v node >/dev/null 2>&1; then
+        echo "Node.js not available; skipping Codex passthrough server."
+        return
+    fi
+
+    echo "Starting Codex passthrough server..."
+    runuser -u "$USER_NAME" -- node "$server_path" >/tmp/omni-codex-server.log 2>&1 &
+}
+
 # Logic:
 # 1. If no arguments are provided, start SSHD (as root).
 # 2. If arguments are provided, execute them as the non-root user.
 if [ "$#" -eq 0 ]; then
+    start_codex_node_server
     echo "Starting SSH server..."
     exec /usr/sbin/sshd -D -e
 else

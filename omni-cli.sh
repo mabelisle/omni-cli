@@ -533,9 +533,9 @@ launch_ai() {
     if [ $launched -eq 0 ]; then
         echo "-----------------------------------"
         echo "AI Session closed."
-        read -p "Press Enter to return to menu or type 'shell': " post_choice
-        if [ "$post_choice" = "shell" ]; then
-            exec bash
+        read -p "Press Enter to return to menu or type 'q' to quit: " post_choice
+        if [ "$post_choice" = "q" ] || [ "$post_choice" = "Q" ]; then
+            exit 0
         fi
         return 0
     fi
