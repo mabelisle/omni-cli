@@ -36,3 +36,6 @@
 - Set `PUID`/`PGID` to match your host user to avoid permission issues.
 - Rotate `USER_PASS` if exposing SSH beyond local development.
 - Persistent data lives in `/data`; tool configs live in `/config`.
+
+## Documentation
+- Review the README.md after making any changes

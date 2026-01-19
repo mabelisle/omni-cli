@@ -27,6 +27,7 @@ Think of it as an all-in-one AI CLI cockpit you can reach from anywhere over SSH
 *   **👤 Smart UID/GID Mapping:** Avoids permission issues on mounted volumes.
 *   **🧪 Aider Power-User Flow:** Provider selection (DeepSeek/OpenRouter/Ollama), recent models, and OpenRouter category pricing.
 *   **🗝️ API Key Status:** Quick status panel for configured API keys.
+*   **🔌 OpenAI-Style API:** Local HTTP server that proxies chat completions to Codex or Gemini.
 
 ---
 
@@ -87,6 +88,8 @@ You can customize the environment by setting environment variables in your `dock
 | `PGID` | `1000` | **Group ID**. Set this to your host user's GID (run `id -g`). |
 | `USER_PASS`| `changeme`| **SSH Password**. The password for the `omni` user (only effective if set during build via `--build-arg`). |
 | `TZ` | `UTC` | **Timezone**. Set container timezone (e.g., `America/New_York`). |
+| `CODEX_PASSTHROUGH_PORT` | `8000` | **API Server Port**. Port exposed by the Codex/Gemini passthrough server. |
+| `CODEX_TIMEOUT_SECONDS` | `300` | **API Timeout**. Max runtime for Codex/Gemini requests. |
 
 ### Aider Provider Variables
 
@@ -189,6 +192,55 @@ There are plenty of ways to get free AI access using these tools! Since you have
 1.  Start with your preferred agent.
 2.  If you hit a rate limit or a free tier cap, simply **switch to the next one** in the menu.
 3.  Cycle through **Gemini**, **Codex**, **Copilot**, **Claude**, and **Aider** to maximize your productivity without needing a paid subscription for every single service.
+
+---
+
+## 🔌 API Passthrough (OpenAI-Style)
+
+Omni-CLI starts a lightweight HTTP server inside the container that proxies chat completions to **Codex** or **Gemini**. It exposes OpenAI-compatible endpoints:
+
+*   `GET /` for health
+*   `GET /v1/models` for the model catalog
+*   `POST /v1/chat/completions` for chat completions
+
+### 1. Expose the API Port
+Map the default port `8000` (or the value of `CODEX_PASSTHROUGH_PORT`) when you run the container:
+
+```bash
+docker run -d \
+  --name omni-cli \
+  -p 2222:22 \
+  -p 8000:8000 \
+  -v $(pwd)/omni-data:/data \
+  -v $(pwd)/omni-config:/config \
+  -e PUID=$(id -u) \
+  -e PGID=$(id -g) \
+  ghcr.io/mabelisle/omni-cli:main
+```
+
+Docker Compose:
+
+```yaml
+ports:
+  - "2222:22"
+  - "8000:8000"
+```
+
+### 2. Call the API
+Use `codex-default` (default) or `gemini-default`, or pick a model from `GET /v1/models`:
+
+```bash
+curl http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "codex-default",
+    "messages": [
+      { "role": "user", "content": "Write a haiku about SSH." }
+    ]
+  }'
+```
+
+*Tip:* if your OpenRouter key is set, the model catalog also includes verified OpenRouter Codex/Gemini models.
 
 ---
 
