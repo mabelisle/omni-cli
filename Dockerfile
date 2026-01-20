@@ -26,8 +26,7 @@ RUN apt-get update && \
     curl \
     ca-certificates \
     procps \
-    python3 \
-    pipx && \
+    python3 && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -42,7 +41,8 @@ RUN npm install -g \
     @google/gemini-cli-core \
     @openai/codex \
     @github/copilot \
-    @anthropic-ai/claude-code && \
+    @anthropic-ai/claude-code \
+    @charmland/crush && \
     npm cache clean --force
 
 # ---- Final Stage ----
@@ -62,23 +62,19 @@ RUN userdel -r node && \
 COPY --from=builder /usr/local/lib/node_modules /usr/local/lib/node_modules
 COPY --from=builder /usr/local/bin /usr/local/bin
 
-# Setup persistent directories and symlinks
-# We create them here to ensure they exist, but ownership is fixed in entrypoint
-RUN PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin pipx install aider-chat && \
-    pipx ensurepath
-
-RUN mkdir -p /config/gemini /config/codex /config/copilot /config/claude /config/npm /config/.aider /data && \
+RUN mkdir -p /config/gemini /config/codex /config/copilot /config/claude /config/npm /config/crush/config /config/crush/data /config/crush/cache /data && \
     ln -sf /config/gemini  /home/${USER_NAME}/.gemini  && \
     ln -sf /config/codex   /home/${USER_NAME}/.codex   && \
     ln -sf /config/copilot /home/${USER_NAME}/.copilot && \
     ln -sf /config/claude /home/${USER_NAME}/.claude && \
     ln -sf /config/npm     /home/${USER_NAME}/.npm && \
-    ln -sf /config/.aider /home/${USER_NAME}/.aider && \
+    ln -sf /config/crush /home/${USER_NAME}/.crush && \
     echo 'alias ll="ls -alF"' >> /etc/bash.bashrc
 
 # Copy scripts
 COPY omni-cli.sh /usr/local/bin/omni-cli
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY api.js /usr/local/bin/api.js
 RUN chmod +x /usr/local/bin/omni-cli /usr/local/bin/entrypoint.sh && \
     echo '/usr/local/bin/omni-cli' >> /home/${USER_NAME}/.profile
 

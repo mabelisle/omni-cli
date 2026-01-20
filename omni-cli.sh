@@ -8,7 +8,6 @@ fi
 # Core paths.
 ROOT_DIR="/data"
 OMNI_CLI_REPO="/data/omni-cli"
-RECENT_MODELS_FILE="/config/.aider/omni-cli-recent-models"
 
 # Color palette (TTY-only).
 USE_COLOR=0
@@ -57,71 +56,23 @@ OMNI_CLI_VERSION="$(get_version)"
 
 # API keys shown in the status menu.
 all_env_vars=(
-    OPENROUTER_API_KEY
-    OR_API_KEY
-    OPENAI_API_KEY
-    OPENAI_API_BASE
-    OPENAI_LIKE_API_KEY
     ANTHROPIC_API_KEY
+    OPENAI_API_KEY
+    OPENROUTER_API_KEY
     GEMINI_API_KEY
-    GROQ_API_KEY
-    XAI_API_KEY
-    COHERE_API_KEY
-    GOOGLE_API_KEY
-    PALM_API_KEY
-    DEEPSEEK_API_KEY
-    OLLAMA_API_BASE
-    OLLAMA_API_KEY
-    LM_STUDIO_API_KEY
-    LM_STUDIO_API_BASE
-    AZURE_API_KEY
-    AZURE_API_VERSION
-    AZURE_API_BASE
-    AZURE_OPENAI_API_KEY
-    AZURE_AI_API_KEY
-    ALEPH_ALPHA_API_KEY
-    ALEPHALPHA_API_KEY
-    ANYSCALE_API_KEY
-    ARK_API_KEY
-    BASETEN_API_KEY
-    BYTEZ_API_KEY
     CEREBRAS_API_KEY
-    CLARIFAI_API_KEY
-    CLOUDFLARE_API_KEY
-    CO_API_KEY
-    CODESTRAL_API_KEY
-    COMPACTIFAI_API_KEY
-    DASHSCOPE_API_KEY
-    DATABRICKS_API_KEY
-    DEEPINFRA_API_KEY
-    FEATHERLESS_AI_API_KEY
-    FIREWORKS_AI_API_KEY
-    FIREWORKS_API_KEY
-    FIREWORKSAI_API_KEY
-    HUGGINGFACE_API_KEY
-    INFINITY_API_KEY
-    MARITALK_API_KEY
-    MISTRAL_API_KEY
-    MOONSHOT_API_KEY
-    NEBIUS_API_KEY
-    NLP_CLOUD_API_KEY
-    NOVITA_API_KEY
-    NVIDIA_NIM_API_KEY
-    OVHCLOUD_API_KEY
-    PERPLEXITYAI_API_KEY
-    PREDIBASE_API_KEY
-    PROVIDER_API_KEY
-    REPLICATE_API_KEY
-    SAMBANOVA_API_KEY
-    TOGETHERAI_API_KEY
-    USER_API_KEY
-    VERCEL_AI_GATEWAY_API_KEY
-    VOLCENGINE_API_KEY
-    VOYAGE_API_KEY
-    WANDB_API_KEY
-    WATSONX_API_KEY
-    WX_API_KEY
-    XINFERENCE_API_KEY
+    HF_TOKEN
+    VERTEXAI_PROJECT
+    VERTEXAI_LOCATION
+    GROQ_API_KEY
+    AWS_ACCESS_KEY_ID
+    AWS_SECRET_ACCESS_KEY
+    AWS_REGION
+    AWS_PROFILE
+    AWS_BEARER_TOKEN_BEDROCK
+    AZURE_OPENAI_API_ENDPOINT
+    AZURE_OPENAI_API_KEY
+    AZURE_OPENAI_API_VERSION
 )
 
 # Basic helpers.
@@ -132,10 +83,6 @@ env_status() {
     else
         echo "${COLOR_RED}unset${COLOR_RESET}"
     fi
-}
-
-openrouter_api_key() {
-    echo "${OPENROUTER_API_KEY:-${OR_API_KEY:-}}"
 }
 
 mask_api_key() {
@@ -153,17 +100,31 @@ mask_api_key() {
 # Quick PATH check for installed CLIs.
 cli_status() {
     local missing=()
-    local tools=(gemini codex copilot claude aider)
+    local tools=(gemini codex copilot claude)
     for tool in "${tools[@]}"; do
         if ! command -v "$tool" >/dev/null 2>&1; then
             missing+=("$tool")
         fi
     done
 
+    if ! command -v crush >/dev/null 2>&1; then
+        missing+=("crush")
+    fi
+
     if [ ${#missing[@]} -eq 0 ]; then
         echo "${COLOR_GREEN}OK${COLOR_RESET}"
     else
         echo "${COLOR_RED}Missing:${COLOR_RESET} ${missing[*]}"
+    fi
+}
+
+# Check if API server is running.
+api_server_status() {
+    local port="${CODEX_PASSTHROUGH_PORT:-8000}"
+    if curl -s "http://localhost:${port}/" >/dev/null 2>&1; then
+        echo "${COLOR_GREEN}Running on port ${port}${COLOR_RESET}"
+    else
+        echo "${COLOR_RED}Not running${COLOR_RESET}"
     fi
 }
 
@@ -216,282 +177,42 @@ show_env_menu() {
     read -p "Press Enter to go back: " _
 }
 
-# Aider helpers.
-model_is_available() {
-    local model=$1
-    case $model in
-        openrouter/*) [ -n "$(openrouter_api_key)" ] ;;
-        ollama/*) [ -n "${OLLAMA_API_BASE:-}" ] ;;
-        deepseek) [ -n "${DEEPSEEK_API_KEY:-}" ] ;;
-        *) return 1 ;;
-    esac
+show_api_menu() {
+    clear
+    local port="${CODEX_PASSTHROUGH_PORT:-8000}"
+    local status=$(api_server_status)
+    
+    echo "${COLOR_BOLD}API Server Status:${COLOR_RESET}"
+    echo "  ${COLOR_YELLOW}Status:${COLOR_RESET} $status"
+    echo "  ${COLOR_YELLOW}Port:${COLOR_RESET} $port"
+    echo "  ${COLOR_YELLOW}Health:${COLOR_RESET} http://localhost:${port}/"
+    echo "  ${COLOR_YELLOW}Models:${COLOR_RESET} http://localhost:${port}/v1/models"
+    echo "  ${COLOR_YELLOW}Endpoint:${COLOR_RESET} http://localhost:${port}/v1/chat/completions"
+    echo ""
+    echo "${COLOR_BOLD}Environment Variables:${COLOR_RESET}"
+    echo "  ${COLOR_YELLOW}CODEX_PASSTHROUGH_PORT:${COLOR_RESET} ${CODEX_PASSTHROUGH_PORT:-8000}"
+    echo "  ${COLOR_YELLOW}CODEX_TIMEOUT_SECONDS:${COLOR_RESET} ${CODEX_TIMEOUT_SECONDS:-300}"
+    echo "  ${COLOR_YELLOW}OPENROUTER_API_KEY:${COLOR_RESET} $(env_status OPENROUTER_API_KEY)"
+    echo ""
+    echo "${COLOR_BOLD}Usage Example:${COLOR_RESET}"
+    echo "  curl http://localhost:${port}/v1/chat/completions \\"
+    echo "    -H \"Content-Type: application/json\" \\"
+    echo "    -d '{\"model\":\"codex-default\",\"messages\":[{\"role\":\"user\",\"content\":\"Hello!\"}]}'"
+    echo ""
+    read -p "Press Enter to go back: " _
 }
 
-run_aider_model() {
-    local model=$1
-    aider --model "$model"
-    record_recent_model "$model"
-}
-
-record_recent_model() {
-    local model=$1
-    [ -z "$model" ] && return
-    mkdir -p "$(dirname "$RECENT_MODELS_FILE")"
-    {
-        echo "$model"
-        grep -vxF "$model" "$RECENT_MODELS_FILE" 2>/dev/null
-    } | head -n 5 > "${RECENT_MODELS_FILE}.tmp"
-    mv "${RECENT_MODELS_FILE}.tmp" "$RECENT_MODELS_FILE"
-}
-
-load_recent_models() {
-    recent_models=()
-    [ -f "$RECENT_MODELS_FILE" ] || return
-    while IFS= read -r line; do
-        [ -z "$line" ] && continue
-        if model_is_available "$line"; then
-            recent_models+=("$line")
-        fi
-        if [ ${#recent_models[@]} -ge 5 ]; then
-            break
-        fi
-    done < "$RECENT_MODELS_FILE"
-}
-
-# OpenRouter listing helpers.
-openrouter_categories=(
-    "Programming"
-    "Roleplay"
-    "Marketing"
-    "SEO"
-    "Technology"
-    "Science"
-    "Translation"
-    "Legal"
-    "Finance"
-    "Health"
-    "Trivia"
-    "Academia"
-)
-
-select_openrouter_category() {
-    local choice
-    echo "Select category (default: Programming):"
-    echo "  ${COLOR_YELLOW}b)${COLOR_RESET} Back"
-    for i in "${!openrouter_categories[@]}"; do
-        printf "  %s%2d)%s %s\n" "$COLOR_YELLOW" "$((i+1))" "$COLOR_RESET" "${openrouter_categories[$i]}"
-    done
-    read -p "> " choice
-    if [[ "$choice" =~ ^[Bb]$ ]]; then
-        return 1
+# Crush helper.
+launch_crush() {
+    if command -v crush >/dev/null 2>&1; then
+        XDG_CONFIG_HOME="/config/crush/config" \
+        XDG_DATA_HOME="/config/crush/data" \
+        XDG_CACHE_HOME="/config/crush/cache" \
+        crush
+        return $?
     fi
-    if [[ "$choice" =~ ^[0-9]+$ ]]; then
-        local idx=$((choice-1))
-        if [ $idx -ge 0 ] && [ $idx -lt ${#openrouter_categories[@]} ]; then
-            openrouter_category="${openrouter_categories[$idx]}"
-            return
-        fi
-    fi
-    openrouter_category="Programming"
-}
-
-fetch_openrouter_models() {
-    local category=$1
-    local cache="/tmp/openrouter-models-${category,,}.json"
-    local max_age=3600
-    local now
-    now=$(date +%s)
-    local api_key
-    api_key=$(openrouter_api_key)
-
-    if [ -z "$api_key" ]; then
-        return 1
-    fi
-
-    if [ -f "$cache" ]; then
-        local updated
-        updated=$(stat -c %Y "$cache" 2>/dev/null || echo 0)
-        if [ $((now - updated)) -lt "$max_age" ]; then
-            echo "$cache"
-            return 0
-        fi
-    fi
-
-    if curl -fsSL -G "https://openrouter.ai/api/v1/models" \
-        -H "Authorization: Bearer ${api_key}" \
-        -d "category=${category,,}" \
-        -o "$cache"; then
-        echo "$cache"
-        return 0
-    fi
-
+    echo "Crush CLI not found."
     return 1
-}
-
-list_openrouter_models() {
-    local category=$1
-    local cache
-    cache=$(fetch_openrouter_models "$category") || return 1
-
-    python3 - "$cache" <<'PY'
-import json
-import sys
-
-cache = sys.argv[1]
-
-with open(cache, "r", encoding="utf-8") as handle:
-    data = json.load(handle)
-
-matches = data.get("data", [])
-
-for idx, model in enumerate(matches, start=1):
-    pricing = model.get("pricing", {})
-    completion_raw = pricing.get("completion")
-    try:
-        completion_value = float(completion_raw)
-    except (TypeError, ValueError):
-        completion_value = float("inf")
-    model["_completion_value"] = completion_value
-
-matches.sort(key=lambda m: m.get("_completion_value", float("inf")))
-
-def per_million(value):
-    try:
-        return f"${float(value) * 1_000_000:.4g}/M"
-    except (TypeError, ValueError):
-        return "?"
-
-for idx, model in enumerate(matches, start=1):
-    pricing = model.get("pricing", {})
-    prompt = per_million(pricing.get("prompt"))
-    completion = per_million(pricing.get("completion"))
-    model_id = model.get("id", "")
-    model_name = model.get("name", model_id)
-    print(f"{idx:2d}) {model_id} | {model_name} | prompt {prompt} | completion {completion}")
-PY
-}
-
-prompt_openrouter_model() {
-    openrouter_model_id=""
-    while true; do
-        read -p "List OpenRouter models now? (${COLOR_YELLOW}y${COLOR_RESET}/${COLOR_YELLOW}N${COLOR_RESET}/${COLOR_YELLOW}b${COLOR_RESET}): " list_choice
-        if [[ "$list_choice" =~ ^[Bb]$ ]]; then
-            return 1
-        fi
-        if [[ "$list_choice" =~ ^[Yy]$ ]]; then
-            if ! select_openrouter_category; then
-                continue
-            fi
-            if ! list_openrouter_models "$openrouter_category"; then
-                echo "OpenRouter list unavailable."
-            fi
-        fi
-        while true; do
-            read -p "OpenRouter model id (e.g. anthropic/claude-3.5-sonnet, ${COLOR_YELLOW}b${COLOR_RESET} to back): " openrouter_model_id
-            if [[ "$openrouter_model_id" =~ ^[Bb]$ ]]; then
-                openrouter_model_id=""
-                break
-            fi
-            if [ -n "$openrouter_model_id" ]; then
-                openrouter_model_id="${openrouter_model_id#openrouter/}"
-                return 0
-            fi
-        done
-    done
-}
-
-# Aider menu with provider selection and recent models.
-launch_aider() {
-    local aider_choice
-
-    while true; do
-        local provider_keys=()
-        local provider_labels=()
-        if [ -n "${DEEPSEEK_API_KEY:-}" ]; then
-            provider_keys+=("deepseek")
-            provider_labels+=("DeepSeek")
-        fi
-        if [ -n "$(openrouter_api_key)" ]; then
-            provider_keys+=("openrouter")
-            provider_labels+=("OpenRouter")
-        fi
-        if [ -n "${OLLAMA_API_BASE:-}" ]; then
-            provider_keys+=("ollama")
-            provider_labels+=("Ollama")
-        fi
-
-        if [ ${#provider_keys[@]} -eq 0 ]; then
-            echo "No Aider providers configured."
-            echo "Set DEEPSEEK_API_KEY, OPENROUTER_API_KEY/OR_API_KEY, or OLLAMA_API_BASE."
-            return 1
-        fi
-
-        echo -e "\n${COLOR_BOLD}Aider options:${COLOR_RESET}"
-        for i in "${!provider_labels[@]}"; do
-            echo "  ${COLOR_YELLOW}$((i+1)))${COLOR_RESET} ${provider_labels[$i]}"
-        done
-
-        load_recent_models
-        if [ ${#recent_models[@]} -gt 0 ]; then
-            echo "${COLOR_BOLD}Recent models:${COLOR_RESET}"
-            for i in "${!recent_models[@]}"; do
-                echo "  ${COLOR_YELLOW}r$((i+1)))${COLOR_RESET} ${recent_models[$i]}"
-            done
-        fi
-        echo "  ${COLOR_YELLOW}b)${COLOR_RESET} Back"
-        read -p "> " aider_choice
-
-        if [[ "$aider_choice" =~ ^[Rr][1-5]$ ]]; then
-            local r_idx=${aider_choice:1}
-            r_idx=$((r_idx-1))
-            if [ $r_idx -ge 0 ] && [ $r_idx -lt ${#recent_models[@]} ]; then
-                run_aider_model "${recent_models[$r_idx]}"
-                return 0
-            fi
-            continue
-        fi
-
-        if ! [[ "$aider_choice" =~ ^[0-9]+$ ]]; then
-            if [[ "$aider_choice" =~ ^[Bb]$ ]]; then
-                return 1
-            fi
-            continue
-        fi
-
-        local idx=$((aider_choice-1))
-        if [ $idx -lt 0 ] || [ $idx -ge ${#provider_keys[@]} ]; then
-            continue
-        fi
-
-        case "${provider_keys[$idx]}" in
-            deepseek)
-                run_aider_model "deepseek"
-                return 0
-                ;;
-            openrouter)
-                if ! prompt_openrouter_model; then
-                    continue
-                fi
-                if [ -n "$openrouter_model_id" ]; then
-                    run_aider_model "openrouter/$openrouter_model_id"
-                    return 0
-                fi
-                continue
-                ;;
-            ollama)
-                read -p "Ollama model id (e.g. llama3.1, ${COLOR_YELLOW}b${COLOR_RESET} to back): " ollama_model_id
-                if [[ "$ollama_model_id" =~ ^[Bb]$ ]]; then
-                    continue
-                fi
-                if [ -n "$ollama_model_id" ]; then
-                    run_aider_model "ollama/$ollama_model_id"
-                    return 0
-                fi
-                echo "Ollama model id required."
-                continue
-                ;;
-        esac
-    done
 }
 
 # AI agent selection menu.
@@ -501,7 +222,7 @@ ai_menu() {
 
     while true; do
         echo -e "\n${COLOR_BOLD}Select AI Agent:${COLOR_RESET}"
-        echo "  ${COLOR_YELLOW}1)${COLOR_RESET} Gemini  ${COLOR_YELLOW}2)${COLOR_RESET} Codex  ${COLOR_YELLOW}3)${COLOR_RESET} Copilot  ${COLOR_YELLOW}4)${COLOR_RESET} Claude  ${COLOR_YELLOW}5)${COLOR_RESET} Aider  ${COLOR_YELLOW}b)${COLOR_RESET} Back"
+        echo "  ${COLOR_YELLOW}1)${COLOR_RESET} Gemini  ${COLOR_YELLOW}2)${COLOR_RESET} Codex  ${COLOR_YELLOW}3)${COLOR_RESET} Copilot  ${COLOR_YELLOW}4)${COLOR_RESET} Claude  ${COLOR_YELLOW}5)${COLOR_RESET} Crush  ${COLOR_YELLOW}b)${COLOR_RESET} Back"
         read -p "> " ai_idx
         if [[ "$ai_idx" =~ ^[Bb]$ ]]; then
             return 1
@@ -528,7 +249,7 @@ launch_ai() {
         2) echo " Tool: OpenAI Codex"; codex; launched=0 ;;
         3) echo " Tool: GitHub Copilot"; copilot; launched=0 ;;
         4) echo " Tool: Anthropic Claude Code"; claude; launched=0 ;;
-        5) echo " Tool: Aider Chat"; launch_aider; launched=$? ;;
+        5) echo " Tool: Crush"; launch_crush; launched=$? ;;
     esac
     if [ $launched -eq 0 ]; then
         echo "-----------------------------------"
@@ -577,7 +298,7 @@ EOF
 
     echo ""
     echo "${COLOR_BOLD}Folders:${COLOR_RESET} ${COLOR_YELLOW}n)${COLOR_RESET} New  ${COLOR_YELLOW}d)${COLOR_RESET} Delete  ${COLOR_YELLOW}u)${COLOR_RESET} Up  ${COLOR_YELLOW}r)${COLOR_RESET} Root"
-    echo "${COLOR_BOLD}Other:${COLOR_RESET}   ${COLOR_YELLOW}l)${COLOR_RESET} Launch AI  ${COLOR_YELLOW}k)${COLOR_RESET} API keys status  ${COLOR_YELLOW}q)${COLOR_RESET} Exit"
+    echo "${COLOR_BOLD}Other:${COLOR_RESET}   ${COLOR_YELLOW}l)${COLOR_RESET} Launch AI  ${COLOR_YELLOW}k)${COLOR_RESET} API keys status  ${COLOR_YELLOW}a)${COLOR_RESET} API Server  ${COLOR_YELLOW}q)${COLOR_RESET} Exit"
     echo "-----------------------------------"
     read -p "Select project or action: " choice
 
@@ -609,6 +330,9 @@ EOF
             ;;
         k|K)
             show_env_menu
+            ;;
+        a|A)
+            show_api_menu
             ;;
         u|U)
             if [ "$current_dir" != "$ROOT_DIR" ]; then

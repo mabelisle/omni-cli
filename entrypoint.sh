@@ -13,71 +13,23 @@ persist_env_vars() {
     echo "#!/bin/bash" > "$tmp_file"
 
     local vars=(
-        OPENROUTER_API_KEY
-        OR_API_KEY
-        OPENAI_API_KEY
-        OPENAI_API_BASE
-        OPENAI_LIKE_API_KEY
         ANTHROPIC_API_KEY
+        OPENAI_API_KEY
+        OPENROUTER_API_KEY
         GEMINI_API_KEY
-        GROQ_API_KEY
-        XAI_API_KEY
-        COHERE_API_KEY
-        GOOGLE_API_KEY
-        PALM_API_KEY
-        DEEPSEEK_API_KEY
-        OLLAMA_API_BASE
-        OLLAMA_API_KEY
-        LM_STUDIO_API_KEY
-        LM_STUDIO_API_BASE
-        AZURE_API_KEY
-        AZURE_API_VERSION
-        AZURE_API_BASE
-        AZURE_OPENAI_API_KEY
-        AZURE_AI_API_KEY
-        ALEPH_ALPHA_API_KEY
-        ALEPHALPHA_API_KEY
-        ANYSCALE_API_KEY
-        ARK_API_KEY
-        BASETEN_API_KEY
-        BYTEZ_API_KEY
         CEREBRAS_API_KEY
-        CLARIFAI_API_KEY
-        CLOUDFLARE_API_KEY
-        CO_API_KEY
-        CODESTRAL_API_KEY
-        COMPACTIFAI_API_KEY
-        DASHSCOPE_API_KEY
-        DATABRICKS_API_KEY
-        DEEPINFRA_API_KEY
-        FEATHERLESS_AI_API_KEY
-        FIREWORKS_AI_API_KEY
-        FIREWORKS_API_KEY
-        FIREWORKSAI_API_KEY
-        HUGGINGFACE_API_KEY
-        INFINITY_API_KEY
-        MARITALK_API_KEY
-        MISTRAL_API_KEY
-        MOONSHOT_API_KEY
-        NEBIUS_API_KEY
-        NLP_CLOUD_API_KEY
-        NOVITA_API_KEY
-        NVIDIA_NIM_API_KEY
-        OVHCLOUD_API_KEY
-        PERPLEXITYAI_API_KEY
-        PREDIBASE_API_KEY
-        PROVIDER_API_KEY
-        REPLICATE_API_KEY
-        SAMBANOVA_API_KEY
-        TOGETHERAI_API_KEY
-        USER_API_KEY
-        VERCEL_AI_GATEWAY_API_KEY
-        VOLCENGINE_API_KEY
-        VOYAGE_API_KEY
-        WANDB_API_KEY
-        WATSONX_API_KEY
-        WX_API_KEY
-        XINFERENCE_API_KEY
+        HF_TOKEN
+        VERTEXAI_PROJECT
+        VERTEXAI_LOCATION
+        GROQ_API_KEY
+        AWS_ACCESS_KEY_ID
+        AWS_SECRET_ACCESS_KEY
+        AWS_REGION
+        AWS_PROFILE
+        AWS_BEARER_TOKEN_BEDROCK
+        AZURE_OPENAI_API_ENDPOINT
+        AZURE_OPENAI_API_KEY
+        AZURE_OPENAI_API_VERSION
     )
     local has_env=0
     for var in "${vars[@]}"; do
@@ -112,10 +64,17 @@ for dir in /data /config /var/run/sshd; do
 done
 
 # Ensure config subdirectories exist (in case volume mount is empty)
-for subdir in gemini codex copilot claude npm .aider; do
+for subdir in gemini codex copilot claude npm crush; do
     if [ ! -d "/config/$subdir" ]; then
         echo "Creating missing config directory: /config/$subdir"
         mkdir -p "/config/$subdir"
+    fi
+done
+
+for dir in /config/crush/config /config/crush/data /config/crush/cache; do
+    if [ ! -d "$dir" ]; then
+        echo "Creating missing Crush directory: $dir"
+        mkdir -p "$dir"
     fi
 done
 
@@ -151,13 +110,18 @@ ensure_symlink /config/codex "/home/${USER_NAME}/.codex"
 ensure_symlink /config/copilot "/home/${USER_NAME}/.copilot"
 ensure_symlink /config/claude "/home/${USER_NAME}/.claude"
 ensure_symlink /config/npm "/home/${USER_NAME}/.npm"
-ensure_symlink /config/.aider "/home/${USER_NAME}/.aider"
+ensure_symlink /config/crush "/home/${USER_NAME}/.crush"
 
 persist_env_vars
 
 start_codex_node_server() {
-    local server_path="/data/omni-cli/api.js"
-    if [ ! -f "$server_path" ]; then
+    # Try to find api.js in the container first, then fall back to data volume
+    local server_path
+    if [ -f "/usr/local/bin/api.js" ]; then
+        server_path="/usr/local/bin/api.js"
+    elif [ -f "/data/omni-cli/api.js" ]; then
+        server_path="/data/omni-cli/api.js"
+    else
         return
     fi
     if ! command -v node >/dev/null 2>&1; then
