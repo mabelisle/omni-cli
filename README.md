@@ -4,7 +4,7 @@
 ![Node.js](https://img.shields.io/badge/Node.js-25--slim-green?logo=node.js)
 ![Status](https://img.shields.io/badge/Status-Active-success)
 
-**Omni-CLI** is a Dockerized SSH workspace that bundles multiple AI CLIs in one place. Connect once and use **Gemini**, **Codex**, **Copilot**, **Claude**, and **Crush** without installing anything on your laptop. Your tools and configs live in a single remote workspace, so you do not need to log in on every device.
+**Omni-CLI** is a Dockerized SSH workspace that bundles multiple AI CLIs in one place. Connect once and use **Gemini**, **Codex**, **Copilot**, **Claude**, and **OpenCode** without installing anything on your laptop. Your tools and configs live in a single remote workspace, so you do not need to log in on every device.
 
 Think of it as an all-in-one AI CLI cockpit you can reach from anywhere over SSH.
 
@@ -20,12 +20,11 @@ Think of it as an all-in-one AI CLI cockpit you can reach from anywhere over SSH
 ## 🚀 Features
 
 *   **🔑 SSH-First Workflow:** Connect remotely and launch AI CLIs immediately.
-*   **🤖 Preinstalled Agents:** **Gemini**, **Codex**, **Copilot**, **Claude**, and **Crush** are ready out of the box.
+*   **🤖 Preinstalled Agents:** **Gemini**, **Codex**, **Copilot**, **Claude**, and **OpenCode** are ready out of the box.
 *   **💾 Persistent Workspace:** Projects and auth/config live in Docker volumes, not on each device.
 *   **🧭 Unified Menu:** The `omni-cli` dashboard navigates nested folders, shows breadcrumbs, and launches tools.
 *   **🔒 Isolated Runtime:** Everything runs in Docker, keeping your host clean.
 *   **👤 Smart UID/GID Mapping:** Avoids permission issues on mounted volumes.
-*   **🧩 Crush CLI:** Preinstalled via `npm install -g @charmland/crush`.
 *   **🗝️ API Key Status:** Quick status panel for configured API keys.
 *   **🔌 OpenAI-Style API:** Local HTTP server that proxies chat completions to Codex or Gemini.
 
@@ -166,7 +165,7 @@ The `entrypoint.sh` script is the brain of the container initialization:
 When you log in, `omni-cli.sh` is sourced. It provides an ASCII-art menu to:
 *   Navigate folders and subfolders in `/data` with breadcrumb paths.
 *   Create/Delete folders.
-*   Launch context-aware AI sessions within those folders (**Gemini**, **Codex**, **Copilot**, **Claude**, **Crush**).
+*   Launch context-aware AI sessions within those folders (**Gemini**, **Codex**, **Copilot**, **Claude**, **OpenCode**).
 *   View API key status.
 
 ---
@@ -175,13 +174,28 @@ When you log in, `omni-cli.sh` is sourced. It provides an ASCII-art menu to:
 
 **Important:** Omni-CLI provides the *environment* and *tools*, but **you must provide the access**.
 
-Each AI CLI (**Gemini**, **Codex**, **Copilot**, **Claude**, **Crush**) is pre-installed software that requires its own authentication. When you launch a tool for the first time, you will typically be prompted to login or provide an API key.
+Each AI CLI (**Gemini**, **Codex**, **Copilot**, **Claude**, **OpenCode**) is pre-installed software that requires its own authentication. When you launch a tool for the first time, you will typically be prompted to login or provide an API key.
 
 ### Pro Tip: The "Free Tier" Rotation 🔄
 There are plenty of ways to get free AI access using these tools! Since you have all of them at your fingertips:
 1.  Start with your preferred agent.
 2.  If you hit a rate limit or a free tier cap, simply **switch to the next one** in the menu.
-3.  Cycle through **Gemini**, **Codex**, **Copilot**, **Claude**, and **Crush** to maximize your productivity without needing a paid subscription for every single service.
+3.  Cycle through **Gemini**, **Codex**, **Copilot**, **Claude**, and **OpenCode** to maximize your productivity without needing a paid subscription for every single service.
+
+### OpenCode Provider Environment Variables
+
+OpenCode can read provider credentials from environment variables. These are the variables documented at https://opencode.ai/docs/providers/.
+
+| Provider | Environment Variables |
+| :--- | :--- |
+| **SAP AI Core** | `AICORE_SERVICE_KEY`, `AICORE_DEPLOYMENT_ID`, `AICORE_RESOURCE_GROUP` |
+| **Anthropic** | `ANTHROPIC_API_KEY` |
+| **Amazon Bedrock** | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `AWS_PROFILE`, `AWS_BEARER_TOKEN_BEDROCK`, `AWS_WEB_IDENTITY_TOKEN_FILE`, `AWS_ROLE_ARN` |
+| **Azure OpenAI** | `AZURE_RESOURCE_NAME` |
+| **Azure Cognitive Services** | `AZURE_COGNITIVE_SERVICES_RESOURCE_NAME` |
+| **Cloudflare AI Gateway** | `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_GATEWAY_ID`, `CLOUDFLARE_API_TOKEN` |
+| **GitLab Duo** | `GITLAB_INSTANCE_URL`, `GITLAB_TOKEN`, `GITLAB_AI_GATEWAY_URL`, `GITLAB_OAUTH_CLIENT_ID` |
+| **Google Vertex AI** | `GOOGLE_APPLICATION_CREDENTIALS`, `GOOGLE_CLOUD_PROJECT`, `VERTEX_LOCATION` |
 
 ---
 
@@ -499,7 +513,7 @@ This project stands on the shoulders of giants. A huge thank you to the teams be
 *   **Codex:** [openai/codex](https://github.com/openai/codex)
 *   **Copilot:** [github/copilot-cli](https://github.com/github/copilot-cli)
 *   **Claude:** [anthropics/claude-code](https://github.com/anthropics/claude-code)
-*   **Crush:** [@charmland/crush](https://www.npmjs.com/package/@charmland/crush)
+*   **OpenCode:** [opencode.ai](https://opencode.ai)
 
 ---
 

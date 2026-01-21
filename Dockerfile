@@ -42,7 +42,7 @@ RUN npm install -g \
     @openai/codex \
     @github/copilot \
     @anthropic-ai/claude-code \
-    @charmland/crush && \
+    opencode-ai && \
     npm cache clean --force
 
 # ---- Final Stage ----
@@ -62,13 +62,13 @@ RUN userdel -r node && \
 COPY --from=builder /usr/local/lib/node_modules /usr/local/lib/node_modules
 COPY --from=builder /usr/local/bin /usr/local/bin
 
-RUN mkdir -p /config/gemini /config/codex /config/copilot /config/claude /config/npm /config/crush/config /config/crush/data /config/crush/cache /data && \
+RUN mkdir -p /config/gemini /config/codex /config/copilot /config/claude /config/npm /config/opencode/config /config/opencode/data /config/opencode/cache /data && \
     ln -sf /config/gemini  /home/${USER_NAME}/.gemini  && \
     ln -sf /config/codex   /home/${USER_NAME}/.codex   && \
     ln -sf /config/copilot /home/${USER_NAME}/.copilot && \
     ln -sf /config/claude /home/${USER_NAME}/.claude && \
     ln -sf /config/npm     /home/${USER_NAME}/.npm && \
-    ln -sf /config/crush /home/${USER_NAME}/.crush && \
+    ln -sf /config/opencode /home/${USER_NAME}/.opencode && \
     echo 'alias ll="ls -alF"' >> /etc/bash.bashrc
 
 # Copy scripts
