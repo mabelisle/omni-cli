@@ -6,25 +6,31 @@
 # AI tools (Gemini, Codex, Copilot, Claude, OpenCode).
 # ==============================================================================
 
+# ==============================================================================
+# OMNI-CLI - Interactive AI CLI Hub
+# ==============================================================================
+
 # ------------------------------------------------------------------------------
 # 1. CONFIGURATION & GLOBAL STATE
 # ------------------------------------------------------------------------------
 
-# Safer defaults without breaking interactive flows.
+# Safe execution mode
 set -u
 set -o pipefail
 
+# Directory paths
 readonly ROOT_DIR="/data"
 readonly OMNI_CLI_REPO="/data/omni-cli"
 readonly CONFIG_DIR="/config/opencode"
 readonly OPENCODE_CONFIG_DIR="${CONFIG_DIR}/config/opencode"
 readonly OPENCODE_CONFIG_FILE="${OPENCODE_CONFIG_DIR}/opencode.json"
 readonly OPENCODE_CACHE_DIR="${CONFIG_DIR}/data"
+readonly SYNC_SCRIPT="/data/omni-cli/src/sync_openrouter_models.py"
 
-# Initialize color variables to avoid unbound errors before setup.
+# ANSI color codes
 C_RESET="" C_BOLD="" C_DIM="" C_RED="" C_GREEN="" C_YELLOW="" C_BLUE="" C_CYAN=""
 
-# List of API keys and env vars to monitor.
+# Environment variables to monitor
 declare -a ALL_ENV_VARS=(
     ANTHROPIC_API_KEY OPENAI_API_KEY OPENROUTER_API_KEY GEMINI_API_KEY
     AICORE_SERVICE_KEY AICORE_DEPLOYMENT_ID AICORE_RESOURCE_GROUP
@@ -36,20 +42,18 @@ declare -a ALL_ENV_VARS=(
     GOOGLE_APPLICATION_CREDENTIALS GOOGLE_CLOUD_PROJECT VERTEX_LOCATION
 )
 
-# Global state used across menus.
+# Global menu state
 declare -a projects=()
 current_dir="$ROOT_DIR"
 OMNI_CLI_VERSION=""
 
-# Load persisted environment variables.
-if [ -f /etc/profile.d/omni-cli-env.sh ]; then
-    # shellcheck source=/dev/null
-    . /etc/profile.d/omni-cli-env.sh
-fi
-if [ -f /etc/profile.d/omni-env.sh ]; then
-    # shellcheck source=/dev/null
-    . /etc/profile.d/omni-env.sh
-fi
+# Load persisted environment variables
+for env_file in /etc/profile.d/omni-cli-env.sh /etc/profile.d/omni-env.sh; do
+    if [ -f "$env_file" ]; then
+        # shellcheck source=/dev/null
+        . "$env_file"
+    fi
+done
 
 # ------------------------------------------------------------------------------
 # 2. UTILITY FUNCTIONS
@@ -170,14 +174,14 @@ is_valid_folder_name() {
 }
 
 # ------------------------------------------------------------------------------
-# 3. STATUS CHECKS
+# 3. STATUS CHECKS & API
 # ------------------------------------------------------------------------------
 
-# Check for installed AI CLI tools.
+# Check for installed AI CLI tools
 cli_status() {
     local missing=()
     local tools=(gemini codex copilot claude opencode)
-    local tool
+
     for tool in "${tools[@]}"; do
         if ! command -v "$tool" >/dev/null 2>&1; then
             missing+=("$tool")
@@ -191,7 +195,7 @@ cli_status() {
     fi
 }
 
-# Check if the local API server is running.
+# Check if the local API server is running
 api_server_status() {
     local port="${CODEX_PASSTHROUGH_PORT:-8000}"
     if curl -s "http://localhost:${port}/" >/dev/null 2>&1; then
@@ -205,7 +209,7 @@ api_server_status() {
 # 4. OPENROUTER & OPENCODE LOGIC
 # ------------------------------------------------------------------------------
 
-# Sync OpenRouter models into OpenCode config for auto-complete.
+# Sync OpenRouter models into OpenCode config for auto-complete
 sync_opencode_openrouter_models() {
     local models_path="${1:-}"
 
@@ -214,58 +218,21 @@ sync_opencode_openrouter_models() {
         return 1
     fi
 
+    if [ ! -f "$SYNC_SCRIPT" ]; then
+        echo "sync_openrouter_models.py not found at $SYNC_SCRIPT" >&2
+        return 1
+    fi
+
     mkdir -p "$OPENCODE_CONFIG_DIR"
 
-    python3 -c '
-import json
-import sys
-from pathlib import Path
-
-config_path = Path(sys.argv[1])
-models_path = sys.argv[2] if len(sys.argv) > 2 and sys.argv[2] else ""
-
-try:
-    if models_path:
-        payload = json.loads(Path(models_path).read_text())
-    else:
-        payload = json.load(sys.stdin)
-except Exception:
-    sys.exit(1)
-
-if not isinstance(payload, dict):
-    sys.exit(1)
-
-data = payload.get("data")
-if not isinstance(data, list):
-    sys.exit(2)
-
-model_ids = sorted({m.get("id") for m in data if m.get("id")})
-if not model_ids:
-    sys.exit(3)
-
-config = {}
-if config_path.exists():
-    try:
-        config = json.loads(config_path.read_text())
-    except Exception:
-        config = {}
-
-config.setdefault("$schema", "https://opencode.ai/config.json")
-provider = config.setdefault("provider", {})
-openrouter = provider.setdefault("openrouter", {})
-models = openrouter.setdefault("models", {})
-
-for model_id in model_ids:
-    model_entry = models.setdefault(model_id, {})
-    options = model_entry.setdefault("options", {})
-    provider_opts = options.setdefault("provider", {})
-    provider_opts["allow_fallbacks"] = False
-
-config_path.write_text(json.dumps(config, indent=2) + "\n")
-' "$OPENCODE_CONFIG_FILE" "$models_path"
+    if [ -n "$models_path" ]; then
+        python3 "$SYNC_SCRIPT" "$OPENCODE_CONFIG_FILE" "$models_path"
+    else
+        python3 "$SYNC_SCRIPT" "$OPENCODE_CONFIG_FILE"
+    fi
 }
 
-# Background fetch of models.
+# Background fetch of OpenRouter models
 prefetch_openrouter_models() {
     local cache_path="${OPENCODE_CACHE_DIR}/openrouter_models.json"
     local cache_tmp="${cache_path}.tmp"
@@ -285,33 +252,25 @@ prefetch_openrouter_models() {
     fi
 }
 
-# Format the model list for selection (sorted by avg input/output price).
+# Format OpenRouter model list for selection (sorted by avg price)
 format_model_list_python() {
     python3 -c '
 import json
 import sys
+
 try:
     content = sys.stdin.read()
     if not content:
         sys.exit(0)
     payload = json.loads(content)
-except Exception as e:
-    print(f"DEBUG: JSON parse error: {e}", file=sys.stderr)
+except Exception:
     sys.exit(0)
 
-if not isinstance(payload, dict):
-    print("DEBUG: Payload is not a dictionary", file=sys.stderr)
-    sys.exit(0)
-
-if "error" in payload:
-    err = payload.get("error", {})
-    msg = err.get("message", "Unknown OpenRouter error")
-    print(f"DEBUG: OpenRouter API error: {msg}", file=sys.stderr)
+if not isinstance(payload, dict) or "error" in payload:
     sys.exit(0)
 
 data = payload.get("data", [])
 if not isinstance(data, list):
-    print("DEBUG: \"data\" key is not a list", file=sys.stderr)
     sys.exit(0)
 
 rows = []
@@ -346,7 +305,7 @@ for avg_p, out_p, in_p, mid in sorted(rows, key=lambda x: x[0]):
 '
 }
 
-# Select an OpenRouter model. Return 2 when the user backs out.
+# Select an OpenRouter model (returns 2 when user backs out)
 select_openrouter_model() {
     local target_var=$1
     if [ -z "$target_var" ]; then
@@ -356,8 +315,8 @@ select_openrouter_model() {
 
     printf -v "$target_var" '%s' ""
 
-    local answer
     local categories=(programming roleplay marketing seo technology science translation legal finance health trivia academia)
+    local answer
 
     while true; do
         read -r -p "Load latest OpenRouter models? (y/N): " answer
@@ -379,7 +338,7 @@ select_openrouter_model() {
             read -r -p "Select category: " cat_choice
 
             if [[ "$cat_choice" =~ ^[Bb]$ ]]; then
-                return 2
+                break
             fi
 
             if [[ "$cat_choice" =~ ^[0-9]+$ ]]; then
@@ -451,6 +410,7 @@ select_openrouter_model() {
     done
 }
 
+# Launch OpenCode with optional model selection
 launch_opencode() {
     if ! command -v opencode >/dev/null 2>&1; then
         echo "${C_RED}OpenCode CLI not found.${C_RESET}"
@@ -504,9 +464,10 @@ except Exception:
 # 5. MENUS & UI
 # ------------------------------------------------------------------------------
 
+# Show summary of API keys in main menu
 show_env_summary() {
     local enabled=()
-    local var
+
     for var in "${ALL_ENV_VARS[@]}"; do
         if [[ "$var" == *_API_KEY ]] && [ -n "${!var:-}" ]; then
             enabled+=("$var")
@@ -523,6 +484,7 @@ show_env_summary() {
     fi
 }
 
+# Show detailed API key status menu
 show_full_env_menu() {
     clear
     echo "${C_BOLD}API keys status (all):${C_RESET}"
@@ -530,9 +492,10 @@ show_full_env_menu() {
         printf "  %-35s %s\n" "${C_YELLOW}${var}:${C_RESET}" "$(env_status "$var")"
     done
     echo ""
-    pause_prompt
+    pause_prompt "Press Enter to return to menu: "
 }
 
+# Show API server status menu
 show_api_menu() {
     clear
     local port="${CODEX_PASSTHROUGH_PORT:-8000}"
@@ -557,9 +520,10 @@ show_api_menu() {
     echo "    -H \"Content-Type: application/json\" \\"
     echo "    -d '{\"model\":\"codex-default\",\"messages\":[{\"role\":\"user\",\"content\":\"Hello!\"}]}'"
     echo ""
-    pause_prompt
+    pause_prompt "Press Enter to return to menu: "
 }
 
+# Launch AI tool wrapper
 launch_ai_wrapper() {
     local target_dir=$1
     local ai_choice=$2
@@ -575,27 +539,20 @@ launch_ai_wrapper() {
     fi
 
     local tool_name=""
-    local tool_rc=0
     case $ai_choice in
-        1) tool_name="Gemini CLI"; gemini; tool_rc=$? ;;
-        2) tool_name="OpenAI Codex"; codex; tool_rc=$? ;;
-        3) tool_name="GitHub Copilot"; copilot; tool_rc=$? ;;
-        4) tool_name="Anthropic Claude"; claude; tool_rc=$? ;;
-        5) tool_name="OpenCode"; launch_opencode; tool_rc=$? ;;
+        1) tool_name="Gemini CLI"; gemini ;;
+        2) tool_name="OpenAI Codex"; codex ;;
+        3) tool_name="GitHub Copilot"; copilot ;;
+        4) tool_name="Anthropic Claude"; claude ;;
+        5) tool_name="OpenCode"; launch_opencode ;;
     esac
-
-    if [ "$ai_choice" -eq 5 ] && [ $tool_rc -eq 2 ]; then
-        return
-    fi
 
     echo "-----------------------------------"
     echo "$tool_name session closed."
-    read -r -p "Press Enter to return to menu (or 'q' to quit): " post_choice
-    if [[ "$post_choice" =~ ^[Qq]$ ]]; then
-        exit 0
-    fi
+    sleep 1
 }
 
+# AI agent selection menu
 ai_menu() {
     local target_dir=$1
     while true; do
@@ -620,20 +577,23 @@ ai_menu() {
     done
 }
 
+# Load projects from current directory
 load_projects() {
     projects=()
     mapfile -t projects < <(find "$current_dir" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null | sort)
 }
 
+# Draw main menu
 draw_main_menu() {
     clear
     cat << OMNI_MENU
 ${C_CYAN}${C_BOLD}
- ██████  ███    ███ ███    ██ ██        ██████ ██      ██
-██    ██ ████  ████ ████   ██ ██       ██      ██      ██
-██    ██ ██ ████ ██ ██ ██  ██ ██ █████ ██      ██      ██
-██    ██ ██  ██  ██ ██  ██ ██ ██       ██      ██      ██
- ██████  ██      ██ ██   ████ ██        ██████ ███████ ██
+  ██████  ███    ███ ███    ██ ██        ██████ ██      ██
+ ██    ██ ████  ████ ████   ██ ██       ██      ██      ██
+ ██    ██ ██ ████ ██ ██ ██  ██ ██ █████ ██      ██      ██
+ ██    ██ ██  ██  ██ ██  ██ ██ ██       ██      ██      ██
+  ██████  ██      ██ ██   ████ ██        ██████ ███████ ██
+
 
 ${C_DIM}    [ OMNI-CLI ${OMNI_CLI_VERSION} ]      [ STATUS: $(cli_status) ]${C_RESET}
 ${C_BLUE}---------------------------------------------------------${C_RESET}
@@ -665,6 +625,7 @@ OMNI_MENU
 # 6. MAIN LOOP
 # ------------------------------------------------------------------------------
 
+# Prompt for new folder creation
 prompt_new_folder() {
     local folder_name
     read -r -p "Folder name (relative): " folder_name
@@ -681,6 +642,7 @@ prompt_new_folder() {
     mkdir -p "$current_dir/$folder_name"
 }
 
+# Prompt for folder deletion
 prompt_delete_folder() {
     local delete_idx
     read -r -p "Project # to delete (${C_YELLOW}b${C_RESET} to back): " delete_idx
@@ -700,6 +662,7 @@ prompt_delete_folder() {
     fi
 }
 
+# Navigate to project by index
 select_project_by_index() {
     local choice=$1
     if [[ ! "$choice" =~ ^[0-9]+$ ]]; then
@@ -712,6 +675,7 @@ select_project_by_index() {
     fi
 }
 
+# Main menu loop
 menu_loop() {
     while true; do
         draw_main_menu
@@ -719,42 +683,21 @@ menu_loop() {
         read -r -p "Select project or action: " choice
 
         case $choice in
-            n|N)
-                prompt_new_folder
-                ;;
-            d|D)
-                prompt_delete_folder
-                ;;
-            l|L)
-                ai_menu "$current_dir"
-                ;;
-            k|K)
-                show_full_env_menu
-                ;;
-            a|A)
-                show_api_menu
-                ;;
-            b|B)
-                if [ "$current_dir" != "$ROOT_DIR" ]; then
-                    current_dir=$(dirname "$current_dir")
-                fi
-                ;;
-            r|R)
-                current_dir="$ROOT_DIR"
-                ;;
-            q|Q)
-                echo "Goodbye!"
-                exit 0
-                ;;
-            [0-9]*)
-                select_project_by_index "$choice"
-                ;;
-            *)
-                ;;
+            n|N) prompt_new_folder ;;
+            d|D) prompt_delete_folder ;;
+            l|L) ai_menu "$current_dir" ;;
+            k|K) show_full_env_menu ;;
+            a|A) show_api_menu ;;
+            b|B) [ "$current_dir" != "$ROOT_DIR" ] && current_dir=$(dirname "$current_dir") ;;
+            r|R) current_dir="$ROOT_DIR" ;;
+            q|Q) echo "Goodbye!"; exit 0 ;;
+            [0-9]*) select_project_by_index "$choice" ;;
+            *) ;;
         esac
     done
 }
 
+# Main entry point
 main() {
     init_colors
     OMNI_CLI_VERSION="$(get_version)"
@@ -762,6 +705,7 @@ main() {
 
     check_dependencies
 
+    # Prefetch OpenRouter models in background if API key is set
     if [ -n "${OPENROUTER_API_KEY:-}" ]; then
         prefetch_openrouter_models >/dev/null 2>&1 &
     fi
