@@ -8,6 +8,8 @@
 
 Think of it as an all-in-one AI CLI cockpit you can reach from anywhere over SSH.
 
+**🚀 Clever API Redirection:** Redirect API calls through your CLI to use your existing subscriptions while keeping your API keys secure in your local Docker container. Access your own AI API without exposing credentials to third parties.
+
 ---
 
 ## 📸 Screenshots
@@ -27,6 +29,7 @@ Think of it as an all-in-one AI CLI cockpit you can reach from anywhere over SSH
 *   **👤 Smart UID/GID Mapping:** Avoids permission issues on mounted volumes.
 *   **🗝️ API Key Status:** Quick status panel for configured API keys.
 *   **🔌 OpenAI-Style API:** Local HTTP server that proxies chat completions to Codex or Gemini.
+*   **🔄 Clever API Redirection:** Use your existing AI subscriptions through a single API endpoint without exposing your API keys to third parties.
 
 ---
 
@@ -96,6 +99,12 @@ You can customize the environment by setting environment variables in your `dock
 | :--- | :--- | :--- |
 | `data` | `/data` | **Workspace Storage**. Maps to your local project directory. |
 | `config`| `/config` | **Tool Configs**. Persists npm caches, auth tokens, and CLI settings. |
+
+### NPM Global Updates
+
+Global npm installs are redirected to `/config/npm` so updates persist across container restarts.
+`/config/npm/bin` is added to `PATH` for the `omni` user. To reset to image defaults, clear the
+`/config/npm` contents or remove the mounted `config` volume.
 
 ---
 
@@ -201,21 +210,34 @@ OpenCode can read provider credentials from environment variables. These are the
 
 ## 🔌 API Passthrough (OpenAI-Style)
 
-Omni-CLI starts a lightweight Node.js HTTP server (`api.js`) inside the container that **proxies chat completions to your installed CLI tools** (Codex or Gemini). It exposes fully OpenAI-compatible endpoints, allowing you to use the same API structure as OpenAI's official API, but with your local models.
+**💡 The Clever Part: Redirect API Calls to Your CLI**
+
+Omni-CLI's most powerful feature is its ability to redirect API calls through your local CLI tools. This means you can:
+
+1. **Use a normal subscription** - Leverage your existing OpenAI, Anthropic, or other provider subscriptions
+2. **Access your own API** - Keep your API keys secure within your Docker container, never exposing them to third-party services
+3. **Centralize access** - Route all AI requests through one secure endpoint without sharing credentials
 
 ### How It Works
 
-The API server acts as a **translation layer**:
+The API server acts as a **secure translation layer**:
 
 1.  **Receives** OpenAI-formatted requests (`POST /v1/chat/completions`)
 2.  **Translates** the request into CLI commands
-3.  **Executes** the appropriate CLI tool (`codex` or `gemini`)
+3.  **Executes** the appropriate CLI tool (`codex` or `gemini`) **using your stored credentials**
 4.  **Returns** an OpenAI-compatible response
 
 **Translation Flow:**
 ```
-OpenAI Request → api.js → CLI execution → Response parsing → OpenAI Response
+OpenAI Request → api.js → CLI execution (using YOUR keys) → Response parsing → OpenAI Response
 ```
+
+**Why This is Clever:**
+- **Your keys stay secure** - API credentials are stored in your Docker container, not passed through third-party services
+- **Use any provider** - Route requests through any AI CLI that supports your subscription
+- **No code changes needed** - Existing OpenAI-compatible code works seamlessly
+- **Centralized billing** - Track all usage through your CLI tools' native APIs
+- **Enterprise-ready** - Perfect for teams who need to route through specific API endpoints while maintaining security
 
 **Key Features:**
 - **Model Aliasing**: `codex-default` and `gemini-default` aliases
@@ -223,6 +245,7 @@ OpenAI Request → api.js → CLI execution → Response parsing → OpenAI Resp
 - **Smart Routing**: Automatically routes to Codex or Gemini based on model name pattern
 - **Temporary Workspaces**: Runs each request in isolated temporary directories
 - **Timeout Protection**: Configurable timeout (default 300s) prevents hanging requests
+- **Secure Credential Management**: All API keys remain in your local Docker container
 
 ### Endpoints
 
@@ -372,7 +395,15 @@ When you set `OPENROUTER_API_KEY` (or `OR_API_KEY`), the API will:
 
 ### 5. Authentication & API Keys
 
-The API server **automatically uses** the CLI tools' authentication. You don't need to set separate API keys for the passthrough server.
+**🔐 Secure Credential Management**
+
+The API server **automatically uses** the CLI tools' authentication stored in your Docker container. You don't need to set separate API keys for the passthrough server - **your credentials never leave your local environment**.
+
+**Key Security Benefits:**
+- **No credential exposure** - API keys stay within your Docker container
+- **Centralized management** - One set of keys for both CLI and API access
+- **Enterprise compliance** - Maintain control over where your API calls route through
+- **No third-party dependencies** - Direct API routing without intermediate services
 
 **Supported Provider Environment Variables:**
 
@@ -443,10 +474,10 @@ Since the API is fully compatible with OpenAI's API structure, you can use it wi
 ```python
 import openai
 
-# Point to your Omni-CLI API
+# Point to your Omni-CLI API (your credentials stay secure locally)
 openai.api_base = "http://localhost:8000/v1"
 
-# Make a request
+# Make a request - will use your stored API keys securely
 response = openai.ChatCompletion.create(
     model="codex-default",
     messages=[{"role": "user", "content": "Hello!"}]
@@ -461,6 +492,34 @@ curl http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{"model":"gemini-default","messages":[{"role":"user","content":"Hi"}]}'
 ```
+
+### 8. Redirecting API Calls to Your Own API
+
+**🎯 The Power of API Redirection**
+
+Instead of pointing your applications to OpenAI's API or Anthropic's API, you can redirect them to your Omni-CLI API server. This gives you:
+
+1. **Use your existing subscription** - No need for new API accounts
+2. **Access your own API** - Route through your CLI tools with your credentials
+3. **Enhanced security** - API keys remain in your Docker container
+4. **Cost control** - Track usage through your CLI tools' native APIs
+5. **Flexibility** - Switch between providers without changing application code
+
+**Example: Redirecting an Existing Application**
+
+```bash
+# Instead of:
+# OPENAI_API_BASE=https://api.openai.com/v1
+
+# Use:
+# OPENAI_API_BASE=http://localhost:8000/v1
+```
+
+**Benefits:**
+- **No code changes needed** - Simply update the API base URL
+- **Multiple providers** - Route through any supported CLI tool (Codex, Gemini, etc.)
+- **Centralized logging** - All requests logged locally
+- **Enterprise ready** - Route through internal APIs without exposing credentials
 
 ### 8. Debugging & Logs
 

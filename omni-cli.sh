@@ -46,6 +46,10 @@ if [ -f /etc/profile.d/omni-cli-env.sh ]; then
     # shellcheck source=/dev/null
     . /etc/profile.d/omni-cli-env.sh
 fi
+if [ -f /etc/profile.d/omni-env.sh ]; then
+    # shellcheck source=/dev/null
+    . /etc/profile.d/omni-env.sh
+fi
 
 # ------------------------------------------------------------------------------
 # 2. UTILITY FUNCTIONS
