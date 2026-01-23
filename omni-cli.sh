@@ -21,6 +21,7 @@ set -o pipefail
 # Directory paths
 readonly ROOT_DIR="/data"
 readonly OMNI_CLI_REPO="/data/omni-cli"
+readonly OMNI_CLI_VERSION_FILE="/etc/omni-cli-version"
 readonly CONFIG_DIR="/config/opencode"
 readonly OPENCODE_CONFIG_DIR="${CONFIG_DIR}/config/opencode"
 readonly OPENCODE_CONFIG_FILE="${OPENCODE_CONFIG_DIR}/opencode.json"
@@ -84,6 +85,14 @@ get_version() {
     if [ -n "${OMNI_CLI_VERSION:-}" ]; then
         echo "$OMNI_CLI_VERSION"
         return
+    fi
+    if [ -f "$OMNI_CLI_VERSION_FILE" ]; then
+        local file_version
+        file_version=$(cat "$OMNI_CLI_VERSION_FILE" 2>/dev/null)
+        if [ -n "$file_version" ]; then
+            echo "$file_version"
+            return
+        fi
     fi
     if command -v git >/dev/null 2>&1 && [ -d "$OMNI_CLI_REPO/.git" ]; then
         local rev
@@ -700,6 +709,13 @@ main() {
     init_colors
     OMNI_CLI_VERSION="$(get_version)"
     current_dir="$ROOT_DIR"
+
+    case "${1:-}" in
+        --version|-v)
+            echo "$OMNI_CLI_VERSION"
+            return 0
+            ;;
+    esac
 
     check_dependencies
 

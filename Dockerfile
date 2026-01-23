@@ -51,7 +51,9 @@ FROM base AS final
 # Create non-root user
 ARG USER_NAME=omni
 ARG USER_PASS=changeme
+ARG OMNI_CLI_VERSION=dev
 ENV USER_NAME=${USER_NAME} \
+    OMNI_CLI_VERSION=${OMNI_CLI_VERSION} \
     NPM_CONFIG_PREFIX=/config/npm \
     PATH="/config/npm/bin:${PATH}"
 # UID/GID can be overridden at runtime via entrypoint if needed, 
@@ -81,6 +83,7 @@ COPY api.js /usr/local/bin/api.js
 COPY omni-env.sh /etc/profile.d/omni-env.sh
 RUN chmod +x /usr/local/bin/omni-cli /usr/local/bin/entrypoint.sh && \
     chmod 0644 /etc/profile.d/omni-env.sh && \
+    printf '%s\n' "${OMNI_CLI_VERSION}" > /etc/omni-cli-version && \
     echo '/usr/local/bin/omni-cli' >> /home/${USER_NAME}/.profile
 
 # Expose SSH port
