@@ -80,7 +80,7 @@ init_colors() {
     fi
 }
 
-# Get version from env or git.
+# Get version from env, version file, or git tag.
 get_version() {
     if [ -n "${OMNI_CLI_VERSION:-}" ]; then
         echo "$OMNI_CLI_VERSION"
@@ -95,6 +95,17 @@ get_version() {
         fi
     fi
     if command -v git >/dev/null 2>&1 && [ -d "$OMNI_CLI_REPO/.git" ]; then
+        local tag
+        tag=$(git -C "$OMNI_CLI_REPO" describe --tags --exact-match 2>/dev/null)
+        if [ -n "$tag" ]; then
+            echo "$tag"
+            return
+        fi
+        tag=$(git -C "$OMNI_CLI_REPO" describe --tags --abbrev=0 2>/dev/null)
+        if [ -n "$tag" ]; then
+            echo "$tag"
+            return
+        fi
         local rev
         rev=$(git -C "$OMNI_CLI_REPO" rev-parse --short HEAD 2>/dev/null)
         if [ -n "$rev" ]; then
