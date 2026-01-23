@@ -26,7 +26,6 @@ Think of it as an all-in-one AI CLI cockpit you can reach from anywhere over SSH
 *   **💾 Persistent Workspace:** Projects and auth/config live in Docker volumes, not on each device.
 *   **🧭 Unified Menu:** The `omni-cli` dashboard navigates nested folders, shows breadcrumbs, and launches tools.
 *   **🔒 Isolated Runtime:** Everything runs in Docker, keeping your host clean.
-*   **👤 Smart UID/GID Mapping:** Avoids permission issues on mounted volumes.
 *   **🗝️ API Key Status:** Quick status panel for configured API keys.
 *   **🔌 OpenAI-Style API:** Local HTTP server that proxies chat completions to Codex or Gemini.
 *   **🔄 Clever API Redirection:** Use your existing AI subscriptions through a single API endpoint without exposing your API keys to third parties.
