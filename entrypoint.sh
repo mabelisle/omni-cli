@@ -13,6 +13,7 @@ persist_env_vars() {
     echo "#!/bin/bash" > "$tmp_file"
 
     local vars=(
+        NODE_OPTIONS
         ANTHROPIC_API_KEY
         OPENAI_API_KEY
         OPENROUTER_API_KEY
@@ -105,11 +106,39 @@ ensure_symlink() {
     fi
 }
 
+ensure_npm_config() {
+    local npm_root="/config/npm"
+    local npmrc="${npm_root}/.npmrc"
+
+    mkdir -p "${npm_root}/bin" "${npm_root}/lib"
+    if [ ! -f "$npmrc" ]; then
+        cat > "$npmrc" <<'EOF'
+prefix=/config/npm
+EOF
+    elif ! grep -q '^prefix=' "$npmrc"; then
+        echo 'prefix=/config/npm' >> "$npmrc"
+    fi
+}
+
+export_npm_env() {
+    export NPM_CONFIG_PREFIX="/config/npm"
+    export NODE_OPTIONS="${NODE_OPTIONS:-} --no-deprecation"
+    if [ -d /config/npm/bin ]; then
+        case ":$PATH:" in
+            *":/config/npm/bin:"*) ;;
+            *) export PATH="/config/npm/bin:$PATH" ;;
+        esac
+    fi
+}
+
 # Initialize SSH host keys if missing
 if [ ! -f /etc/ssh/ssh_host_rsa_key ]; then
     echo "Generating SSH keys..."
     ssh-keygen -A
 fi
+
+# Ensure npm prefix is writable and persistent.
+ensure_npm_config
 
 # Fix ownership of persistent volumes
 chown -R "$USER_NAME":"$USER_NAME" /data /config
@@ -119,7 +148,10 @@ ensure_symlink /config/codex "/home/${USER_NAME}/.codex"
 ensure_symlink /config/copilot "/home/${USER_NAME}/.copilot"
 ensure_symlink /config/claude "/home/${USER_NAME}/.claude"
 ensure_symlink /config/npm "/home/${USER_NAME}/.npm"
+ensure_symlink /config/npm/.npmrc "/home/${USER_NAME}/.npmrc"
 ensure_symlink /config/opencode "/home/${USER_NAME}/.opencode"
+
+export_npm_env
 
 persist_env_vars
 

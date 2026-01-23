@@ -51,7 +51,9 @@ FROM base AS final
 # Create non-root user
 ARG USER_NAME=omni
 ARG USER_PASS=changeme
-ENV USER_NAME=${USER_NAME}
+ENV USER_NAME=${USER_NAME} \
+    NPM_CONFIG_PREFIX=/config/npm \
+    PATH="/config/npm/bin:${PATH}"
 # UID/GID can be overridden at runtime via entrypoint if needed, 
 # but we set a default here. We remove the 'node' user first to free up UID 1000.
 RUN userdel -r node && \
@@ -75,7 +77,9 @@ RUN mkdir -p /config/gemini /config/codex /config/copilot /config/claude /config
 COPY omni-cli.sh /usr/local/bin/omni-cli
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY api.js /usr/local/bin/api.js
+COPY omni-env.sh /etc/profile.d/omni-env.sh
 RUN chmod +x /usr/local/bin/omni-cli /usr/local/bin/entrypoint.sh && \
+    chmod 0644 /etc/profile.d/omni-env.sh && \
     echo '/usr/local/bin/omni-cli' >> /home/${USER_NAME}/.profile
 
 # Expose SSH port

@@ -97,6 +97,12 @@ You can customize the environment by setting environment variables in your `dock
 | `data` | `/data` | **Workspace Storage**. Maps to your local project directory. |
 | `config`| `/config` | **Tool Configs**. Persists npm caches, auth tokens, and CLI settings. |
 
+### NPM Global Updates
+
+Global npm installs are redirected to `/config/npm` so updates persist across container restarts.
+`/config/npm/bin` is added to `PATH` for the `omni` user. To reset to image defaults, clear the
+`/config/npm` contents or remove the mounted `config` volume.
+
 ---
 
 ## 📦 Deployment Options
