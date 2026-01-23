@@ -538,17 +538,15 @@ launch_ai_wrapper() {
         return 1
     fi
 
-    local tool_name=""
     case $ai_choice in
-        1) tool_name="Gemini CLI"; gemini ;;
-        2) tool_name="OpenAI Codex"; codex ;;
-        3) tool_name="GitHub Copilot"; copilot ;;
-        4) tool_name="Anthropic Claude"; claude ;;
-        5) tool_name="OpenCode"; launch_opencode ;;
+        1) gemini; echo "Gemini CLI session closed." ;;
+        2) codex; echo "OpenAI Codex session closed." ;;
+        3) copilot; echo "GitHub Copilot session closed." ;;
+        4) claude; echo "Anthropic Claude session closed." ;;
+        5) launch_opencode; echo "OpenCode session closed." ;;
     esac
 
     echo "-----------------------------------"
-    echo "$tool_name session closed."
     sleep 1
 }
 
