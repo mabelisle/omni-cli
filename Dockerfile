@@ -74,6 +74,7 @@ RUN mkdir -p /config/gemini /config/codex /config/copilot /config/claude /config
     echo 'alias ll="ls -alF"' >> /etc/bash.bashrc
 
 # Copy scripts
+COPY . /data/omni-cli
 COPY omni-cli.sh /usr/local/bin/omni-cli
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY api.js /usr/local/bin/api.js
