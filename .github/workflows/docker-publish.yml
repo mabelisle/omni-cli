@@ -87,5 +87,5 @@ jobs:
           DIGEST: "${{ steps.build-and-push.outputs.digest }}"
         run: |
           for tag in ${TAGS}; do
-            cosign sign --yes "${tag}@${DIGEST}"
+            cosign sign --yes --registry-referrers-mode=oci-1-1 "${tag}@${DIGEST}"
           done

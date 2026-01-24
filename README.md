@@ -1,5 +1,6 @@
 # Omni-CLI: All-in-One AI CLI Hub over SSH
 
+[![GitHub](https://img.shields.io/badge/GitHub-Repo-181717?logo=github)](https://github.com/mabelisle/omni-cli)
 ![Docker](https://img.shields.io/badge/Docker-Enabled-blue?logo=docker)
 ![Node.js](https://img.shields.io/badge/Node.js-25--slim-green?logo=node.js)
 ![Status](https://img.shields.io/badge/Status-Active-success)
@@ -14,8 +15,8 @@ Think of it as an all-in-one AI CLI cockpit you can reach from anywhere over SSH
 
 ## 📸 Screenshots
 
-![Omni-CLI overview](images/Multi-CLI.png)
-![Omni-CLI menu](images/Omni-CLI-menu.png)
+![Omni-CLI overview](https://raw.githubusercontent.com/mabelisle/omni-cli/main/images/Multi-CLI.png)
+![Omni-CLI menu](https://raw.githubusercontent.com/mabelisle/omni-cli/main/images/Omni-CLI-menu.png)
 
 ---
 
