@@ -80,6 +80,15 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Update Docker Hub Description
+        uses: peter-evans/dockerhub-description@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ secrets.DOCKERHUB_USERNAME }}/omni-cli
+          short-description: "Omni-CLI: Dockerized SSH workspace with AI CLIs."
+          readme-filepath: ./README.md
+          
       - name: Sign the published Docker image
         if: "${{ github.event_name != 'pull_request' }}"
         env:
