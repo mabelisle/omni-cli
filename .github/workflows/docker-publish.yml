@@ -94,7 +94,10 @@ jobs:
         env:
           TAGS: "${{ steps.meta.outputs.tags }}"
           DIGEST: "${{ steps.build-and-push.outputs.digest }}"
+          COSIGN_EXPERIMENTAL: "1"
         run: |
           for tag in ${TAGS}; do
-            cosign sign --yes --registry-referrers-mode=oci-1-1 "${tag}@${DIGEST}"
+            if [[ "${tag}" == ghcr.io/* ]]; then
+              cosign sign --yes --registry-referrers-mode=oci-1-1 "${tag}@${DIGEST}"
+            fi
           done

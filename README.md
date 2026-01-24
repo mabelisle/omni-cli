@@ -55,7 +55,7 @@ docker-compose up -d
 Or pull the prebuilt image and run it directly:
 
 ```bash
-docker pull ghcr.io/mabelisle/omni-cli:main
+docker pull ghcr.io/mabelisle/omni-cli:latest
 
 docker run -d \
   --name omni-cli \
@@ -64,7 +64,7 @@ docker run -d \
   -v $(pwd)/omni-config:/config \
   -e PUID=$(id -u) \
   -e PGID=$(id -g) \
-  ghcr.io/mabelisle/omni-cli:main
+  ghcr.io/mabelisle/omni-cli:latest
 ```
 
 ### 2. Connect
@@ -142,7 +142,7 @@ docker run -d \
   -v $(pwd)/omni-config:/config \
   -e PUID=$(id -u) \
   -e PGID=$(id -g) \
-  ghcr.io/mabelisle/omni-cli:main
+  ghcr.io/mabelisle/omni-cli:latest
 ```
 
 ### Option C: Docker CLI (Build Locally)
@@ -268,7 +268,7 @@ docker run -d \
   -v $(pwd)/omni-config:/config \
   -e PUID=$(id -u) \
   -e PGID=$(id -g) \
-  ghcr.io/mabelisle/omni-cli:main
+  ghcr.io/mabelisle/omni-cli:latest
 ```
 
 Docker Compose:
@@ -433,7 +433,7 @@ docker run -d \
   -e OPENAI_API_KEY="sk-..." \
   -e GEMINI_API_KEY="AIza..." \
   -e OPENROUTER_API_KEY="sk-or-..." \
-  ghcr.io/mabelisle/omni-cli:main
+  ghcr.io/mabelisle/omni-cli:latest
 ```
 
 ### 6. Advanced Configuration
@@ -452,7 +452,7 @@ Adjust the maximum execution time for Codex/Gemini requests:
 docker run -d \
   --name omni-cli \
   -e CODEX_TIMEOUT_SECONDS=600 \  # 10 minutes
-  ghcr.io/mabelisle/omni-cli:main
+  ghcr.io/mabelisle/omni-cli:latest
 ```
 
 #### Custom Port
@@ -463,7 +463,7 @@ docker run -d \
   --name omni-cli \
   -e CODEX_PASSTHROUGH_PORT=9000 \
   -p 9000:9000 \
-  ghcr.io/mabelisle/omni-cli:main
+  ghcr.io/mabelisle/omni-cli:latest
 ```
 
 ### 7. Example: Using with OpenAI-Compatible Clients
