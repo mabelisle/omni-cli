@@ -10,8 +10,7 @@ on:
 
 env:
   REGISTRY_GHCR: ghcr.io
-  # Replace 'mabelisle' with your Docker Hub username if it's different
-  DOCKERHUB_REPO: mabelisle/omni-cli
+  DOCKERHUB_REPO: smartypants/omni-cli
 
 jobs:
   build:
