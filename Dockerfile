@@ -17,6 +17,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 # openssh-server: Required for remote access feature
 # nano, git, curl: Standard CLI tools for user convenience
 RUN apt-get update && \
+    apt-get upgrade -y && \
     apt-get install -y --no-install-recommends \
     tini \
     openssh-server \
@@ -36,7 +37,6 @@ FROM base AS builder
 # keep the final layer clean, though strictly for globals it's less critical.
 # It helps if we needed build tools (python/make) that we don't want in final.
 RUN npm install -g \
-    npm@latest \
     @google/gemini-cli \
     @google/gemini-cli-core \
     @openai/codex \
